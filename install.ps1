@@ -99,22 +99,22 @@ function Test-Prerequisite {
 
     # Scoop requires PowerShell 3 at least
     if (($PSVersionTable.PSVersion.Major) -lt 3) {
-        Deny-Install "PowerShell 3 or greater is required to run Scoop.`nGo to: https://docs.microsoft.com/en-us/powershell/`nfor how to update to the latest version of PowerShell."
+        Deny-Install "PowerShell 3 or greater is required to run Scoop. Go to https://docs.microsoft.com/en-us/powershell/ to get the latest version of PowerShell."
     }
 
     # Show notification to change execution policy
     if ((Get-ExecutionPolicy) -gt 'RemoteSigned' -or (Get-ExecutionPolicy) -eq 'ByPass') {
-        Deny-Install "PowerShell requires an execution policy of 'RemoteSigned' to install Scoop.`nTo make this change please run:`n  Set-ExecutionPolicy RemoteSigned -Scope CurrentUser"
+        Deny-Install "PowerShell requires an execution policy of 'RemoteSigned' to install Scoop. To change this please run 'Set-ExecutionPolicy RemoteSigned -Scope CurrentUser'."
     }
 
     # Scoop requires TLS 1.2 SecurityProtocol, which exists in .NET Framework 4.5+
     if ([System.Enum]::GetNames([System.Net.SecurityProtocolType]) -notcontains 'Tls12') {
-        Deny-Install "Scoop requires .NET Framework 4.5+ to work.`nPlease download and install or upgrade it first:`n  https://www.microsoft.com/net/download"
+        Deny-Install "Scoop requires .NET Framework 4.5+ to work. Go to https://www.microsoft.com/net/download to get the latest version of .NET Framework."
     }
 
     # Ensure Robocopy.exe is accessible
     if (!([bool](Get-Command -Name 'robocopy' -ErrorAction SilentlyContinue))) {
-        Deny-Install "Scoop requires 'C:\Windows\System32\Robocopy.exe' to work.`nPlease make sure 'C:\Windows\System32' is in your `$PATH."
+        Deny-Install "Scoop requires 'C:\Windows\System32\Robocopy.exe' to work. Please make sure 'C:\Windows\System32' is in your PATH."
     }
 
     # Test if scoop is installed, by checking if scoop command exists.
