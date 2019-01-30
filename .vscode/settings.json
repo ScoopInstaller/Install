@@ -1,0 +1,18 @@
+{
+    "[powershell]": {
+        // Disable formating until: https://github.com/PowerShell/vscode-powershell/issues/1019 is fixed
+        "editor.formatOnSave": false
+    },
+    "powershell.scriptAnalysis.settingsPath": "PSScriptAnalyzerSettings.psd1",
+    "powershell.codeFormatting.preset": "OTBS",
+    "powershell.codeFormatting.alignPropertyValuePairs": true,
+    "powershell.codeFormatting.ignoreOneLineBlock": true,
+    "editor.rulers": [
+        80,
+        120
+    ],
+    "files.exclude": {
+        "**/.git": true,
+        "**/.DS_Store": true
+    }
+}

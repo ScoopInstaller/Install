@@ -1,0 +1,1 @@
+# Scoop (un)installer
