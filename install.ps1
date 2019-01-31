@@ -52,7 +52,7 @@
 #>
 param(
     [String] $ScoopDir = "$env:USERPROFILE\scoop",
-    [String] $ScoopGlobalDir = "$env:ProgramData\scoop",
+    [String] $ScoopGlobalDir = "$env:ALLUSERSPROFILE\scoop",
     [String] $ScoopCacheDir = "$ScoopDir\cache",
     [Switch] $NoProxy,
     [Uri] $Proxy,
