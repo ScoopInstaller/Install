@@ -78,7 +78,13 @@ function Deny-Install {
 
     Write-Host $message -f DarkRed
     Write-Output "Abort."
-    exit $errorCode
+
+    # Don't abort if invoked with iex that would close the PS session
+    if ($MyInvocation.MyCommand.CommandType -eq 'Script') {
+        return
+    } else {
+        exit $errorCode
+    }
 }
 
 function Test-ValidateParameter {
