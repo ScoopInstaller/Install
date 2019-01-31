@@ -60,6 +60,7 @@ param(
     [Switch] $ProxyUseDefaultCredentials
 )
 
+$IS_EXECUTED_FROM_IEX = ($MyInvocation.MyCommand.CommandType -eq 'Script')
 # Prepare environment variables
 $SCOOP_DIR = $ScoopDir # Scoop root directory
 $SCOOP_GLOBAL_DIR = $ScoopGlobalDir # Scoop global apps directory
@@ -80,8 +81,8 @@ function Deny-Install {
     Write-Output "Abort."
 
     # Don't abort if invoked with iex that would close the PS session
-    if ($MyInvocation.MyCommand.CommandType -eq 'Script') {
-        return
+    if ($IS_EXECUTED_FROM_IEX) {
+        break
     } else {
         exit $errorCode
     }
