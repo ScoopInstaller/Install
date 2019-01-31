@@ -66,7 +66,9 @@ $SCOOP_GLOBAL_DIR = $ScoopGlobalDir # Scoop global apps directory
 $SCOOP_CACHE_DIR = $ScoopCacheDir # Scoop cache directory
 $SCOOP_SHIMS_DIR = "$ScoopDir\shims" # Scoop shims directory
 $SCOOP_APP_DIR = "$ScoopDir\apps\scoop\current" # Scoop itself directory
-$SCOOP_PACKAGE = "https://github.com/lukesampson/scoop/archive/master.zip"
+$SCOOP_CORE_BUCKET_DIR = "$ScoopDir\buckets\core" # Scoop core bucket directory
+$SCOOP_PACKAGE_REPO = "https://github.com/lukesampson/scoop/archive/master.zip"
+$SCOOP_CORE_BUCKET_REPO = "https://github.com/scoopinstaller/scoop-core/archive/master.zip"
 
 function Deny-Install {
     param(
@@ -300,23 +302,36 @@ function Install-Scoop {
 
     # Download scoop zip from GitHub
     Write-Output 'Downloading...'
+    $downloader = Get-Downloader
+    # 1. download scoop
     $scoopZipfile = "$SCOOP_APP_DIR\scoop.zip"
     if (!(Test-Path $SCOOP_APP_DIR)) {
         New-Item -Type Directory $SCOOP_APP_DIR | Out-Null
     }
-
-    $downloader = Get-Downloader
-    $downloader.downloadFile($SCOOP_PACKAGE, $scoopZipfile)
+    $downloader.downloadFile($SCOOP_PACKAGE_REPO, $scoopZipfile)
+    # 2. download scoop core bucket
+    $scoopCoreZipfile = "$SCOOP_CORE_BUCKET_DIR\scoop-core.zip"
+    if (!(Test-Path $SCOOP_CORE_BUCKET_DIR)) {
+        New-Item -Type Directory $SCOOP_CORE_BUCKET_DIR | Out-Null
+    }
+    $downloader.downloadFile($SCOOP_CORE_BUCKET_REPO, $scoopCoreZipfile)
 
     # Extract files from downloaded zip
     Write-Output 'Extracting...'
+    # 1. extract scoop
     $scoopUnzipTempDir = "$SCOOP_APP_DIR\_tmp"
     Expand-Zipfile $scoopZipfile $scoopUnzipTempDir
     Copy-Item "$scoopUnzipTempDir\scoop-*\*" $SCOOP_APP_DIR -Recurse -Force
+    # 2. extract scoop core bucket
+    $scoopCoreUnzipTempDir = "$SCOOP_CORE_BUCKET_DIR\_tmp"
+    Expand-Zipfile $scoopCoreZipfile $scoopCoreUnzipTempDir
+    Copy-Item "$scoopCoreUnzipTempDir\scoop-core-*\*" $SCOOP_CORE_BUCKET_DIR -Recurse -Force
 
     # Cleanup
     Remove-Item $scoopUnzipTempDir -Recurse -Force
     Remove-Item $scoopZipfile
+    Remove-Item $scoopCoreUnzipTempDir -Recurse -Force
+    Remove-Item $scoopCoreZipfile
 
     # Create the scoop shim
     Write-Output 'Creating shim...'
