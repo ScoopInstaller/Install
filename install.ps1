@@ -45,8 +45,8 @@
     Specifies credential for the prxoy.
 .PARAMETER ProxyUseDefaultCredentials
     Use the credentials of the current user for the proxy server that is specified by the -Proxy parameter.
-.PARAMETER AllowRunAsAdmin
-    Force to allow run the installer as administrator.
+.PARAMETER RunAsAdmin
+    Force to run the installer as administrator.
 .LINK
     https://scoop.sh
 .LINK
@@ -60,7 +60,7 @@ param(
     [Uri] $Proxy,
     [System.Management.Automation.PSCredential] $ProxyCredential,
     [Switch] $ProxyUseDefaultCredentials,
-    [Switch] $AllowRunAsAdmin
+    [Switch] $RunAsAdmin
 )
 
 $IS_EXECUTED_FROM_IEX = ($null -eq $MyInvocation.MyCommand.Path)
@@ -120,7 +120,7 @@ function Test-Prerequisite {
     }
 
     # Detect if RunAsAdministrator, there is no need to run as administrator when installing Scoop.
-    if (!$AllowRunAsAdmin -and ([Security.Principal.WindowsPrincipal]`
+    if (!$RunAsAdmin -and ([Security.Principal.WindowsPrincipal]`
         [Security.Principal.WindowsIdentity]::GetCurrent()`
         ).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
         Deny-Install "Don't run the installer as administrator!"
