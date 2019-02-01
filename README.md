@@ -8,7 +8,7 @@ Run this command from your PowerShell to install scoop with default configuratio
 **Typical Installation**
 
 ```powershell
-iwr -useb 'https://raw.githubusercontent.com/tryscoop/install/master/install.ps1' | iex
+iwr -useb 'https://raw.githubusercontent.com/scoopinstaller/install/master/install.ps1' | iex
 ```
 
 **Advanced Installation**
@@ -16,7 +16,7 @@ iwr -useb 'https://raw.githubusercontent.com/tryscoop/install/master/install.ps1
 If you want to have an advanced installation, You can download the installer and manually execute it with parameters.
 
 ```powershell
-iwr -useb 'https://raw.githubusercontent.com/tryscoop/install/master/install.ps1' -outfile 'install.ps1'
+iwr -useb 'https://raw.githubusercontent.com/scoopinstaller/install/master/install.ps1' -outfile 'install.ps1'
 ```
 
 To see all configurable parameters of the installer.
