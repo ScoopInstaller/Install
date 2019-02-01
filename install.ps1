@@ -45,6 +45,8 @@
     Specifies credential for the prxoy.
 .PARAMETER ProxyUseDefaultCredentials
     Use the credentials of the current user for the proxy server that is specified by the -Proxy parameter.
+.PARAMETER AllowRunAsAdmin
+    Force to allow run the installer as administrator.
 .LINK
     https://scoop.sh
 .LINK
@@ -56,11 +58,12 @@ param(
     [String] $ScoopCacheDir = "$ScoopDir\cache",
     [Switch] $NoProxy,
     [Uri] $Proxy,
-    [PSCredential] $ProxyCredential,
-    [Switch] $ProxyUseDefaultCredentials
+    [System.Management.Automation.PSCredential] $ProxyCredential,
+    [Switch] $ProxyUseDefaultCredentials,
+    [Switch] $AllowRunAsAdmin
 )
 
-$IS_EXECUTED_FROM_IEX = ($MyInvocation.MyCommand.CommandType -eq 'Script')
+$IS_EXECUTED_FROM_IEX = ($null -eq $MyInvocation.MyCommand.Path)
 # Prepare environment variables
 $SCOOP_DIR = $ScoopDir # Scoop root directory
 $SCOOP_GLOBAL_DIR = $ScoopGlobalDir # Scoop global apps directory
@@ -101,21 +104,9 @@ function Test-ValidateParameter {
 }
 
 function Test-Prerequisite {
-    # Detect if RunAsAdministrator, there is no need to run as administrator when installing Scoop.
-    if (([Security.Principal.WindowsPrincipal]`
-        [Security.Principal.WindowsIdentity]::GetCurrent()`
-        ).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
-        Deny-Install "Don't run the installer as administrator!"
-    }
-
     # Scoop requires PowerShell 3 at least
     if (($PSVersionTable.PSVersion.Major) -lt 3) {
         Deny-Install "PowerShell 3 or greater is required to run Scoop. Go to https://docs.microsoft.com/en-us/powershell/ to get the latest version of PowerShell."
-    }
-
-    # Show notification to change execution policy
-    if ((Get-ExecutionPolicy) -gt 'RemoteSigned' -or (Get-ExecutionPolicy) -eq 'ByPass') {
-        Deny-Install "PowerShell requires an execution policy of 'RemoteSigned' to install Scoop. To change this please run 'Set-ExecutionPolicy RemoteSigned -Scope CurrentUser'."
     }
 
     # Scoop requires TLS 1.2 SecurityProtocol, which exists in .NET Framework 4.5+
@@ -126,6 +117,18 @@ function Test-Prerequisite {
     # Ensure Robocopy.exe is accessible
     if (!([bool](Get-Command -Name 'robocopy' -ErrorAction SilentlyContinue))) {
         Deny-Install "Scoop requires 'C:\Windows\System32\Robocopy.exe' to work. Please make sure 'C:\Windows\System32' is in your PATH."
+    }
+
+    # Detect if RunAsAdministrator, there is no need to run as administrator when installing Scoop.
+    if (!$AllowRunAsAdmin -and ([Security.Principal.WindowsPrincipal]`
+        [Security.Principal.WindowsIdentity]::GetCurrent()`
+        ).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
+        Deny-Install "Don't run the installer as administrator!"
+    }
+
+    # Show notification to change execution policy
+    if ((Get-ExecutionPolicy) -gt 'RemoteSigned' -or (Get-ExecutionPolicy) -eq 'ByPass') {
+        Deny-Install "PowerShell requires an execution policy of 'RemoteSigned' to install Scoop. To change this please run 'Set-ExecutionPolicy RemoteSigned -Scope CurrentUser'."
     }
 
     # Test if scoop is installed, by checking if scoop command exists.
