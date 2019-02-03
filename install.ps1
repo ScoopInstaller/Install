@@ -65,12 +65,12 @@ param(
 
 $IS_EXECUTED_FROM_IEX = ($null -eq $MyInvocation.MyCommand.Path)
 # Prepare environment variables
-$SCOOP_DIR = $ScoopDir # Scoop root directory
-$SCOOP_GLOBAL_DIR = $ScoopGlobalDir # Scoop global apps directory
-$SCOOP_CACHE_DIR = $ScoopCacheDir # Scoop cache directory
-$SCOOP_SHIMS_DIR = "$ScoopDir\shims" # Scoop shims directory
-$SCOOP_APP_DIR = "$ScoopDir\apps\scoop\current" # Scoop itself directory
-$SCOOP_CORE_BUCKET_DIR = "$ScoopDir\buckets\core" # Scoop core bucket directory
+$SCOOP_DIR = if ($env:SCOOP) { $env:SCOOP } else { $ScoopDir } # Scoop root directory
+$SCOOP_GLOBAL_DIR = if ($env:SCOOP_GLOBAL) { $env:SCOOP_GLOBAL } else { $ScoopGlobalDir } # Scoop global apps directory
+$SCOOP_CACHE_DIR = if ($env:SCOOP_CACHE) { $env:SCOOP_CACHE } elseif ($env:SCOOP) { "$SCOOP_DIR\cache" } else { $ScoopCacheDir } # Scoop cache directory
+$SCOOP_SHIMS_DIR = "$SCOOP_DIR\shims" # Scoop shims directory
+$SCOOP_APP_DIR = "$SCOOP_DIR\apps\scoop\current" # Scoop itself directory
+$SCOOP_CORE_BUCKET_DIR = "$SCOOP_DIR\buckets\core" # Scoop core bucket directory
 
 # TODO: Use a specific version of Scoop and the core bucket
 $SCOOP_PACKAGE_REPO = "https://github.com/lukesampson/scoop/archive/master.zip"
@@ -306,6 +306,13 @@ function Add-ShimsDirToPath {
     }
 }
 
+function Add-Config {
+    scoop config 'root' $SCOOP_DIR
+    scoop config 'cachePath' $SCOOP_CACHE_DIR
+    scoop config 'globalPath' $SCOOP_GLOBAL_DIR
+    scoop config 'lastUpdate' ([System.DateTime]::Now.ToString('o'))
+}
+
 function Install-Scoop {
     Write-Output 'Initializing...'
     Test-ValidateParameter
@@ -351,8 +358,8 @@ function Install-Scoop {
 
     # Finially ensure scoop shims is in the PATH
     Add-ShimsDirToPath
-    # Setup 'lastupdate' config
-    scoop config lastupdate ([System.DateTime]::Now.ToString('o'))
+    # Setup initial configuration of Scoop
+    Add-Config
 
     Write-Host 'Scoop was installed successfully!' -f DarkGreen
     Write-Output "Type 'scoop help' for instructions."
