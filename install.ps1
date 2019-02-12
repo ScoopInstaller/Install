@@ -307,7 +307,7 @@ function Add-ShimsDirToPath {
 }
 
 function Add-Config {
-    scoop config 'root' $SCOOP_DIR
+    scoop config 'rootPath' $SCOOP_DIR
     scoop config 'cachePath' $SCOOP_CACHE_DIR
     scoop config 'globalPath' $SCOOP_GLOBAL_DIR
     scoop config 'lastUpdate' ([System.DateTime]::Now.ToString('o'))
