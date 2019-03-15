@@ -63,14 +63,20 @@ param(
     [Switch] $RunAsAdmin
 )
 
-$IS_EXECUTED_FROM_IEX = ($null -eq $MyInvocation.MyCommand.Path)
 # Prepare variables
-$SCOOP_DIR = $ScoopDir, $env:SCOOP, "$env:USERPROFILE\scoop" | Select-Object -first 1 # Scoop root directory
-$SCOOP_GLOBAL_DIR = $ScoopGlobalDir, $env:SCOOP_GLOBAL, "$env:ProgramData\scoop" | Select-Object -first 1 # Scoop global apps directory
-$SCOOP_CACHE_DIR = $ScoopCacheDir, $env:SCOOP_CACHE, "$SCOOP_DIR\cache" | Select-Object -first 1 # Scoop cache directory
-$SCOOP_SHIMS_DIR = "$SCOOP_DIR\shims" # Scoop shims directory
-$SCOOP_APP_DIR = "$SCOOP_DIR\apps\scoop\current" # Scoop itself directory
-$SCOOP_CORE_BUCKET_DIR = "$SCOOP_DIR\buckets\core" # Scoop core bucket directory
+$IS_EXECUTED_FROM_IEX = ($null -eq $MyInvocation.MyCommand.Path)
+# Scoop root directory
+$SCOOP_DIR = $ScoopDir, $env:SCOOP, "$env:USERPROFILE\scoop" | Where-Object { $_ -ne "" } | Select-Object -first 1
+# Scoop global apps directory
+$SCOOP_GLOBAL_DIR = $ScoopGlobalDir, $env:SCOOP_GLOBAL, "$env:ProgramData\scoop" | Where-Object { $_ -ne "" } | Select-Object -first 1
+# Scoop cache directory
+$SCOOP_CACHE_DIR = $ScoopCacheDir, $env:SCOOP_CACHE, "$SCOOP_DIR\cache" | Where-Object { $_ -ne "" } | Select-Object -first 1
+# Scoop shims directory
+$SCOOP_SHIMS_DIR = "$SCOOP_DIR\shims"
+# Scoop itself directory
+$SCOOP_APP_DIR = "$SCOOP_DIR\apps\scoop\current"
+# Scoop core bucket directory
+$SCOOP_CORE_BUCKET_DIR = "$SCOOP_DIR\buckets\core"
 
 # TODO: Use a specific version of Scoop and the core bucket
 $SCOOP_PACKAGE_REPO = "https://github.com/lukesampson/scoop/archive/master.zip"
