@@ -328,17 +328,6 @@ function Get-Env {
     return [Environment]::GetEnvironmentVariable($name, $target)
 }
 
-function Set-Env {
-    param(
-        [String] $name,
-        [Switch] $global,
-        [String] $value
-    )
-
-    $target = if ($global) { 'Machine' } else { 'User' }
-    [Environment]::SetEnvironmentVariable($name, $value, $target)
-}
-
 function Add-Config {
     # If user-level SCOOP env not defined, save to rootPath
     if (!(Get-Env 'SCOOP' $false)) {
@@ -349,7 +338,7 @@ function Add-Config {
     # with $env:SCOOP_GLOBAL if RunAsAdmin, otherwise save to globalPath
     if (!(Get-Env 'SCOOP_GLOBAL' $true)) {
         if ((Test-IsAdministrator) -and $env:SCOOP_GLOBAL) {
-            Set-Env 'SCOOP_GLOBAL' $true $env:SCOOP_GLOBAL
+            [Environment]::SetEnvironmentVariable('SCOOP_GLOBAL', $env:SCOOP_GLOBAL, 'Machine')
         } else {
             scoop config 'globalPath' $SCOOP_GLOBAL_DIR
         }
@@ -359,7 +348,7 @@ function Add-Config {
     # with $env:SCOOP_CACHE if RunAsAdmin, otherwise save to cachePath
     if (!(Get-Env 'SCOOP_CACHE' $true)) {
         if ((Test-IsAdministrator) -and $env:SCOOP_CACHE) {
-            Set-Env 'SCOOP_CACHE' $true $env:SCOOP_CACHE
+            [Environment]::SetEnvironmentVariable('SCOOP_CACHE', $env:SCOOP_CACHE, 'Machine')
         } else {
             scoop config 'cachePath' $SCOOP_CACHE_DIR
         }
