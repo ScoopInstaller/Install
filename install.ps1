@@ -53,9 +53,9 @@
     https://github.com/lukesampson/scoop/wiki
 #>
 param(
-    [String] $ScoopDir = "$env:USERPROFILE\scoop",
-    [String] $ScoopGlobalDir = "$env:ALLUSERSPROFILE\scoop",
-    [String] $ScoopCacheDir = "$ScoopDir\cache",
+    [String] $ScoopDir,
+    [String] $ScoopGlobalDir,
+    [String] $ScoopCacheDir,
     [Switch] $NoProxy,
     [Uri] $Proxy,
     [System.Management.Automation.PSCredential] $ProxyCredential,
@@ -64,13 +64,13 @@ param(
 )
 
 $IS_EXECUTED_FROM_IEX = ($null -eq $MyInvocation.MyCommand.Path)
-# Prepare environment variables
-$SCOOP_DIR = $ScoopDir # Scoop root directory
-$SCOOP_GLOBAL_DIR = $ScoopGlobalDir # Scoop global apps directory
-$SCOOP_CACHE_DIR = $ScoopCacheDir # Scoop cache directory
-$SCOOP_SHIMS_DIR = "$ScoopDir\shims" # Scoop shims directory
-$SCOOP_APP_DIR = "$ScoopDir\apps\scoop\current" # Scoop itself directory
-$SCOOP_CORE_BUCKET_DIR = "$ScoopDir\buckets\core" # Scoop core bucket directory
+# Prepare variables
+$SCOOP_DIR = $ScoopDir, $env:SCOOP, "$env:USERPROFILE\scoop" | Select-Object -first 1 # Scoop root directory
+$SCOOP_GLOBAL_DIR = $ScoopGlobalDir, $env:SCOOP_GLOBAL, "$env:ProgramData\scoop" | Select-Object -first 1 # Scoop global apps directory
+$SCOOP_CACHE_DIR = $ScoopCacheDir, $env:SCOOP_CACHE, "$SCOOP_DIR\cache" | Select-Object -first 1 # Scoop cache directory
+$SCOOP_SHIMS_DIR = "$SCOOP_DIR\shims" # Scoop shims directory
+$SCOOP_APP_DIR = "$SCOOP_DIR\apps\scoop\current" # Scoop itself directory
+$SCOOP_CORE_BUCKET_DIR = "$SCOOP_DIR\buckets\core" # Scoop core bucket directory
 
 # TODO: Use a specific version of Scoop and the core bucket
 $SCOOP_PACKAGE_REPO = "https://github.com/lukesampson/scoop/archive/master.zip"
@@ -103,6 +103,12 @@ function Test-ValidateParameter {
     }
 }
 
+function Test-IsAdministrator {
+    return ([Security.Principal.WindowsPrincipal]`
+    [Security.Principal.WindowsIdentity]::GetCurrent()`
+    ).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
+}
+
 function Test-Prerequisite {
     # Scoop requires PowerShell 3 at least
     if (($PSVersionTable.PSVersion.Major) -lt 3) {
@@ -120,10 +126,8 @@ function Test-Prerequisite {
     }
 
     # Detect if RunAsAdministrator, there is no need to run as administrator when installing Scoop.
-    if (!$RunAsAdmin -and ([Security.Principal.WindowsPrincipal]`
-        [Security.Principal.WindowsIdentity]::GetCurrent()`
-        ).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
-        Deny-Install "Don't run the installer as administrator!"
+    if (!$RunAsAdmin -and (Test-IsAdministrator)) {
+        Deny-Install "Running the installer as administrator is disabled by default, use -RunAsAdmin parameter if you know what you are doing."
     }
 
     # Show notification to change execution policy
@@ -251,7 +255,9 @@ function Expand-Zipfile {
     }
 }
 
-function Import-ScoopShim($path) {
+function Import-ScoopShim {
+    $path = "$SCOOP_APP_DIR\bin\scoop.ps1"
+
     if (!(Test-Path $SCOOP_SHIMS_DIR)) {
         New-Item -Type Directory $SCOOP_SHIMS_DIR | Out-Null
     }
@@ -306,6 +312,13 @@ function Add-ShimsDirToPath {
     }
 }
 
+function Add-Config {
+    scoop config 'rootPath' $SCOOP_DIR
+    scoop config 'globalPath' $SCOOP_GLOBAL_DIR
+    scoop config 'cachePath' $SCOOP_CACHE_DIR
+    scoop config 'lastUpdate' ([System.DateTime]::Now.ToString('o'))
+}
+
 function Install-Scoop {
     Write-Output 'Initializing...'
     Test-ValidateParameter
@@ -347,12 +360,12 @@ function Install-Scoop {
 
     # Create the scoop shim
     Write-Output 'Creating shim...'
-    Import-ScoopShim "$SCOOP_APP_DIR\bin\scoop.ps1"
+    Import-ScoopShim
 
     # Finially ensure scoop shims is in the PATH
     Add-ShimsDirToPath
-    # Setup 'lastupdate' config
-    scoop config lastupdate ([System.DateTime]::Now.ToString('o'))
+    # Setup initial configuration of Scoop
+    Add-Config
 
     Write-Host 'Scoop was installed successfully!' -f DarkGreen
     Write-Output "Type 'scoop help' for instructions."
