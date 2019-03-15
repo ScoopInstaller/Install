@@ -331,7 +331,9 @@ function Get-Env {
 function Add-Config {
     # If user-level SCOOP env not defined, save to rootPath
     if (!(Get-Env 'SCOOP' $false)) {
-        scoop config 'rootPath' $SCOOP_DIR
+        if ($SCOOP_DIR -ne "$env:USERPROFILE\scoop") {
+            scoop config 'rootPath' $SCOOP_DIR
+        }
     }
 
     # Use system SCOOP_GLOBAL, or set system SCOOP_GLOBAL
@@ -340,7 +342,9 @@ function Add-Config {
         if ((Test-IsAdministrator) -and $env:SCOOP_GLOBAL) {
             [Environment]::SetEnvironmentVariable('SCOOP_GLOBAL', $env:SCOOP_GLOBAL, 'Machine')
         } else {
-            scoop config 'globalPath' $SCOOP_GLOBAL_DIR
+            if ($SCOOP_GLOBAL_DIR -ne "$env:ProgramData\scoop") {
+                scoop config 'globalPath' $SCOOP_GLOBAL_DIR
+            }
         }
     }
 
@@ -350,7 +354,9 @@ function Add-Config {
         if ((Test-IsAdministrator) -and $env:SCOOP_CACHE) {
             [Environment]::SetEnvironmentVariable('SCOOP_CACHE', $env:SCOOP_CACHE, 'Machine')
         } else {
-            scoop config 'cachePath' $SCOOP_CACHE_DIR
+            if ($SCOOP_CACHE_DIR -ne "$SCOOP_DIR\cache") {
+                scoop config 'cachePath' $SCOOP_CACHE_DIR
+            }
         }
     }
 
