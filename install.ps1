@@ -272,7 +272,7 @@ function Import-ScoopShim {
 
     # Setting PSScriptRoot in Shim if it is not defined, so the shim doesn't break in PowerShell 2.0
     Write-Output "if (!(Test-Path Variable:PSScriptRoot)) { `$PSScriptRoot = Split-Path `$MyInvocation.MyCommand.Path -Parent }" | Out-File "$shim.ps1" -Encoding utf8
-    Write-Output "`$path = join-path `"`$PSScriptRoot`" `"$relativePath`"" | Out-File "$shim.ps1" -Encoding utf8 -Append
+    Write-Output "`$path = Join-Path `"`$PSScriptRoot`" `"$relativePath`"" | Out-File "$shim.ps1" -Encoding utf8 -Append
     Write-Output "if (`$MyInvocation.ExpectingInput) { `$input | & `$path @args } else { & `$path @args }" | Out-File "$shim.ps1" -Encoding utf8 -Append
 
     # Make scoop accessible from cmd.exe
@@ -295,11 +295,11 @@ function Add-ShimsDirToPath {
     # Get $env:PATH of current user
     $userEnvPath = [System.Environment]::GetEnvironmentVariable('PATH', 'User')
 
-    if($userEnvPath -notmatch [regex]::escape($SCOOP_SHIMS_DIR)) {
+    if ($userEnvPath -notmatch [Regex]::Escape($SCOOP_SHIMS_DIR)) {
         $h = (Get-PsProvider 'FileSystem').Home
         if (!$h.endswith('\')) { $h += '\' }
         if (!($h -eq '\')) {
-            $friendlyPath = "$SCOOP_SHIMS_DIR" -Replace ([regex]::escape($h)), "~\"
+            $friendlyPath = "$SCOOP_SHIMS_DIR" -Replace ([Regex]::Escape($h)), "~\"
             Write-Output "Adding $friendlyPath to your path."
         } else {
             Write-Output "Adding $SCOOP_SHIMS_DIR to your path."
@@ -312,10 +312,52 @@ function Add-ShimsDirToPath {
     }
 }
 
+function Get-Env {
+    param(
+        [String] $name,
+        [Switch] $global
+    )
+
+    $target = if ($global) { 'Machine' } else { 'User' }
+    return [Environment]::GetEnvironmentVariable($name, $target)
+}
+
+function Set-Env {
+    param(
+        [String] $name,
+        [Switch] $global,
+        [String] $value
+    )
+
+    $target = if ($global) { 'Machine' } else { 'User' }
+    [Environment]::SetEnvironmentVariable($name, $value, $target)
+}
+
 function Add-Config {
+    # Always save rootPath
     scoop config 'rootPath' $SCOOP_DIR
-    scoop config 'globalPath' $SCOOP_GLOBAL_DIR
-    scoop config 'cachePath' $SCOOP_CACHE_DIR
+
+    # Use system SCOOP_GLOBAL, or set system SCOOP_GLOBAL
+    # with $env:SCOOP_GLOBAL if RunAsAdmin, otherwise save to globalPath
+    if (!(Get-Env 'SCOOP_GLOBAL' $true)) {
+        if ((Test-IsAdministrator) -and $env:SCOOP_GLOBAL) {
+            Set-Env 'SCOOP_GLOBAL' $true $env:SCOOP_GLOBAL
+        } else {
+            scoop config 'globalPath' $SCOOP_GLOBAL_DIR
+        }
+    }
+
+    # Use system SCOOP_CACHE, or set system SCOOP_CACHE
+    # with $env:SCOOP_CACHE if RunAsAdmin, otherwise save to cachePath
+    if (!(Get-Env 'SCOOP_CACHE' $true)) {
+        if ((Test-IsAdministrator) -and $env:SCOOP_CACHE) {
+            Set-Env 'SCOOP_CACHE' $true $env:SCOOP_CACHE
+        } else {
+            scoop config 'cachePath' $SCOOP_CACHE_DIR
+        }
+    }
+
+    # save current datatime to lastUpdate
     scoop config 'lastUpdate' ([System.DateTime]::Now.ToString('o'))
 }
 
