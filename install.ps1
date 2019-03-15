@@ -334,8 +334,10 @@ function Set-Env {
 }
 
 function Add-Config {
-    # Always save rootPath
-    scoop config 'rootPath' $SCOOP_DIR
+    # If user-level SCOOP env not defined, save to rootPath
+    if (!(Get-Env 'SCOOP' $false)) {
+        scoop config 'rootPath' $SCOOP_DIR
+    }
 
     # Use system SCOOP_GLOBAL, or set system SCOOP_GLOBAL
     # with $env:SCOOP_GLOBAL if RunAsAdmin, otherwise save to globalPath
