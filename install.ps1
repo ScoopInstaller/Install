@@ -104,9 +104,9 @@ function Test-ValidateParameter {
 }
 
 function Test-Prerequisite {
-    # Scoop requires PowerShell 3 at least
-    if (($PSVersionTable.PSVersion.Major) -lt 3) {
-        Deny-Install "PowerShell 3 or greater is required to run Scoop. Go to https://docs.microsoft.com/en-us/powershell/ to get the latest version of PowerShell."
+    # Scoop requires PowerShell 5 at least
+    if (($PSVersionTable.PSVersion.Major) -lt 5) {
+        Deny-Install "PowerShell 5 or greater is required to run Scoop. Go to https://docs.microsoft.com/en-us/powershell/ to get the latest version of PowerShell."
     }
 
     # Scoop requires TLS 1.2 SecurityProtocol, which exists in .NET Framework 4.5+
