@@ -65,6 +65,7 @@ param(
 
 # Prepare variables
 $IS_EXECUTED_FROM_IEX = ($null -eq $MyInvocation.MyCommand.Path)
+
 # Scoop root directory
 $SCOOP_DIR = $ScoopDir, $env:SCOOP, "$env:USERPROFILE\scoop" | Where-Object { $_ -ne "" } | Select-Object -first 1
 # Scoop global apps directory
@@ -75,12 +76,12 @@ $SCOOP_CACHE_DIR = $ScoopCacheDir, $env:SCOOP_CACHE, "$SCOOP_DIR\cache" | Where-
 $SCOOP_SHIMS_DIR = "$SCOOP_DIR\shims"
 # Scoop itself directory
 $SCOOP_APP_DIR = "$SCOOP_DIR\apps\scoop\current"
-# Scoop core bucket directory
-$SCOOP_CORE_BUCKET_DIR = "$SCOOP_DIR\buckets\core"
+# Scoop main bucket directory
+$SCOOP_MAIN_BUCKET_DIR = "$SCOOP_DIR\buckets\main"
 
-# TODO: Use a specific version of Scoop and the core bucket
+# TODO: Use a specific version of Scoop and the main bucket
 $SCOOP_PACKAGE_REPO = "https://github.com/lukesampson/scoop/archive/master.zip"
-$SCOOP_CORE_BUCKET_REPO = "https://github.com/scoopinstaller/scoop-core/archive/master.zip"
+$SCOOP_MAIN_BUCKET_REPO = "https://github.com/scoopinstaller/scoop-main/archive/master.zip"
 
 function Deny-Install {
     param(
@@ -116,9 +117,9 @@ function Test-IsAdministrator {
 }
 
 function Test-Prerequisite {
-    # Scoop requires PowerShell 3 at least
-    if (($PSVersionTable.PSVersion.Major) -lt 3) {
-        Deny-Install "PowerShell 3 or greater is required to run Scoop. Go to https://docs.microsoft.com/en-us/powershell/ to get the latest version of PowerShell."
+    # Scoop requires PowerShell 5 at least
+    if (($PSVersionTable.PSVersion.Major) -lt 5) {
+        Deny-Install "PowerShell 5 or greater is required to run Scoop. Go to https://docs.microsoft.com/en-us/powershell/ to get the latest version of PowerShell."
     }
 
     # Scoop requires TLS 1.2 SecurityProtocol, which exists in .NET Framework 4.5+
@@ -379,12 +380,12 @@ function Install-Scoop {
         New-Item -Type Directory $SCOOP_APP_DIR | Out-Null
     }
     $downloader.downloadFile($SCOOP_PACKAGE_REPO, $scoopZipfile)
-    # 2. download scoop core bucket
-    $scoopCoreZipfile = "$SCOOP_CORE_BUCKET_DIR\scoop-core.zip"
-    if (!(Test-Path $SCOOP_CORE_BUCKET_DIR)) {
-        New-Item -Type Directory $SCOOP_CORE_BUCKET_DIR | Out-Null
+    # 2. download scoop main bucket
+    $scoopMainZipfile = "$SCOOP_MAIN_BUCKET_DIR\scoop-main.zip"
+    if (!(Test-Path $SCOOP_MAIN_BUCKET_DIR)) {
+        New-Item -Type Directory $SCOOP_MAIN_BUCKET_DIR | Out-Null
     }
-    $downloader.downloadFile($SCOOP_CORE_BUCKET_REPO, $scoopCoreZipfile)
+    $downloader.downloadFile($SCOOP_MAIN_BUCKET_REPO, $scoopMainZipfile)
 
     # Extract files from downloaded zip
     Write-Output 'Extracting...'
@@ -392,16 +393,16 @@ function Install-Scoop {
     $scoopUnzipTempDir = "$SCOOP_APP_DIR\_tmp"
     Expand-Zipfile $scoopZipfile $scoopUnzipTempDir
     Copy-Item "$scoopUnzipTempDir\scoop-*\*" $SCOOP_APP_DIR -Recurse -Force
-    # 2. extract scoop core bucket
-    $scoopCoreUnzipTempDir = "$SCOOP_CORE_BUCKET_DIR\_tmp"
-    Expand-Zipfile $scoopCoreZipfile $scoopCoreUnzipTempDir
-    Copy-Item "$scoopCoreUnzipTempDir\scoop-core-*\*" $SCOOP_CORE_BUCKET_DIR -Recurse -Force
+    # 2. extract scoop main bucket
+    $scoopMainUnzipTempDir = "$SCOOP_MAIN_BUCKET_DIR\_tmp"
+    Expand-Zipfile $scoopMainZipfile $scoopMainUnzipTempDir
+    Copy-Item "$scoopMainUnzipTempDir\scoop-main-*\*" $SCOOP_MAIN_BUCKET_DIR -Recurse -Force
 
     # Cleanup
     Remove-Item $scoopUnzipTempDir -Recurse -Force
     Remove-Item $scoopZipfile
-    Remove-Item $scoopCoreUnzipTempDir -Recurse -Force
-    Remove-Item $scoopCoreZipfile
+    Remove-Item $scoopMainUnzipTempDir -Recurse -Force
+    Remove-Item $scoopMainZipfile
 
     # Create the scoop shim
     Write-Output 'Creating shim...'
