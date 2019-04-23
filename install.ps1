@@ -233,22 +233,8 @@ function Expand-Zipfile {
         }
     }
 
-    # All methods to unzip the file require .NET4.5+
-    if ($PSVersionTable.PSVersion.Major -lt 5) {
-        Add-Type -AssemblyName System.IO.Compression.FileSystem
-        try {
-            [System.IO.Compression.ZipFile]::ExtractToDirectory($path, $to)
-        } catch [System.IO.PathTooLongException] {
-            Deny-Install "Unzip failed: Can't handle the long paths. Please try to keep -ScoopDir shorter."
-        } catch [System.IO.IOException] {
-            Deny-Install "Unzip failed: can't handle the zip file. Please try again."
-        } catch {
-            Deny-Install "Unzip failed: $_"
-        }
-    } else {
-        # Use Expand-Archive to unzip in PowerShell 5+
-        Expand-Archive -Path $path -DestinationPath $to -Force
-    }
+    # PowerShell 5+: use Expand-Archive to extract zip files
+    Expand-Archive -Path $path -DestinationPath $to -Force
 }
 
 function Import-ScoopShim($path) {
