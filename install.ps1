@@ -234,7 +234,7 @@ function Expand-Zipfile {
     }
 
     # PowerShell 5+: use Expand-Archive to extract zip files
-    Expand-Archive -Path $path -DestinationPath $to -Force
+    Microsoft.PowerShell.Archive\Expand-Archive -Path $path -DestinationPath $to -Force
 }
 
 function Import-ScoopShim($path) {
