@@ -53,9 +53,9 @@
     https://github.com/lukesampson/scoop/wiki
 #>
 param(
-    [String] $ScoopDir = "$env:USERPROFILE\scoop",
-    [String] $ScoopGlobalDir = "$env:ALLUSERSPROFILE\scoop",
-    [String] $ScoopCacheDir = "$ScoopDir\cache",
+    [String] $ScoopDir,
+    [String] $ScoopGlobalDir,
+    [String] $ScoopCacheDir,
     [Switch] $NoProxy,
     [Uri] $Proxy,
     [System.Management.Automation.PSCredential] $ProxyCredential,
@@ -63,14 +63,21 @@ param(
     [Switch] $RunAsAdmin
 )
 
+# Prepare variables
 $IS_EXECUTED_FROM_IEX = ($null -eq $MyInvocation.MyCommand.Path)
-# Prepare environment variables
-$SCOOP_DIR = $ScoopDir # Scoop root directory
-$SCOOP_GLOBAL_DIR = $ScoopGlobalDir # Scoop global apps directory
-$SCOOP_CACHE_DIR = $ScoopCacheDir # Scoop cache directory
-$SCOOP_SHIMS_DIR = "$ScoopDir\shims" # Scoop shims directory
-$SCOOP_APP_DIR = "$ScoopDir\apps\scoop\current" # Scoop itself directory
-$SCOOP_MAIN_BUCKET_DIR = "$ScoopDir\buckets\main" # Scoop main bucket directory
+
+# Scoop root directory
+$SCOOP_DIR = $ScoopDir, $env:SCOOP, "$env:USERPROFILE\scoop" | Where-Object { $_ -ne "" } | Select-Object -first 1
+# Scoop global apps directory
+$SCOOP_GLOBAL_DIR = $ScoopGlobalDir, $env:SCOOP_GLOBAL, "$env:ProgramData\scoop" | Where-Object { $_ -ne "" } | Select-Object -first 1
+# Scoop cache directory
+$SCOOP_CACHE_DIR = $ScoopCacheDir, $env:SCOOP_CACHE, "$SCOOP_DIR\cache" | Where-Object { $_ -ne "" } | Select-Object -first 1
+# Scoop shims directory
+$SCOOP_SHIMS_DIR = "$SCOOP_DIR\shims"
+# Scoop itself directory
+$SCOOP_APP_DIR = "$SCOOP_DIR\apps\scoop\current"
+# Scoop main bucket directory
+$SCOOP_MAIN_BUCKET_DIR = "$SCOOP_DIR\buckets\main"
 
 # TODO: Use a specific version of Scoop and the main bucket
 $SCOOP_PACKAGE_REPO = "https://github.com/lukesampson/scoop/archive/master.zip"
@@ -103,6 +110,12 @@ function Test-ValidateParameter {
     }
 }
 
+function Test-IsAdministrator {
+    return ([Security.Principal.WindowsPrincipal]`
+    [Security.Principal.WindowsIdentity]::GetCurrent()`
+    ).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
+}
+
 function Test-Prerequisite {
     # Scoop requires PowerShell 5 at least
     if (($PSVersionTable.PSVersion.Major) -lt 5) {
@@ -120,10 +133,8 @@ function Test-Prerequisite {
     }
 
     # Detect if RunAsAdministrator, there is no need to run as administrator when installing Scoop.
-    if (!$RunAsAdmin -and ([Security.Principal.WindowsPrincipal]`
-        [Security.Principal.WindowsIdentity]::GetCurrent()`
-        ).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
-        Deny-Install "Don't run the installer as administrator!"
+    if (!$RunAsAdmin -and (Test-IsAdministrator)) {
+        Deny-Install "Running the installer as administrator is disabled by default, use -RunAsAdmin parameter if you know what you are doing."
     }
 
     # Show notification to change execution policy
@@ -237,7 +248,9 @@ function Expand-Zipfile {
     Microsoft.PowerShell.Archive\Expand-Archive -Path $path -DestinationPath $to -Force
 }
 
-function Import-ScoopShim($path) {
+function Import-ScoopShim {
+    $path = "$SCOOP_APP_DIR\bin\scoop.ps1"
+
     if (!(Test-Path $SCOOP_SHIMS_DIR)) {
         New-Item -Type Directory $SCOOP_SHIMS_DIR | Out-Null
     }
@@ -252,7 +265,7 @@ function Import-ScoopShim($path) {
 
     # Setting PSScriptRoot in Shim if it is not defined, so the shim doesn't break in PowerShell 2.0
     Write-Output "if (!(Test-Path Variable:PSScriptRoot)) { `$PSScriptRoot = Split-Path `$MyInvocation.MyCommand.Path -Parent }" | Out-File "$shim.ps1" -Encoding utf8
-    Write-Output "`$path = join-path `"`$PSScriptRoot`" `"$relativePath`"" | Out-File "$shim.ps1" -Encoding utf8 -Append
+    Write-Output "`$path = Join-Path `"`$PSScriptRoot`" `"$relativePath`"" | Out-File "$shim.ps1" -Encoding utf8 -Append
     Write-Output "if (`$MyInvocation.ExpectingInput) { `$input | & `$path @args } else { & `$path @args }" | Out-File "$shim.ps1" -Encoding utf8 -Append
 
     # Make scoop accessible from cmd.exe
@@ -275,11 +288,11 @@ function Add-ShimsDirToPath {
     # Get $env:PATH of current user
     $userEnvPath = [System.Environment]::GetEnvironmentVariable('PATH', 'User')
 
-    if($userEnvPath -notmatch [regex]::escape($SCOOP_SHIMS_DIR)) {
+    if ($userEnvPath -notmatch [Regex]::Escape($SCOOP_SHIMS_DIR)) {
         $h = (Get-PsProvider 'FileSystem').Home
         if (!$h.endswith('\')) { $h += '\' }
         if (!($h -eq '\')) {
-            $friendlyPath = "$SCOOP_SHIMS_DIR" -Replace ([regex]::escape($h)), "~\"
+            $friendlyPath = "$SCOOP_SHIMS_DIR" -Replace ([Regex]::Escape($h)), "~\"
             Write-Output "Adding $friendlyPath to your path."
         } else {
             Write-Output "Adding $SCOOP_SHIMS_DIR to your path."
@@ -290,6 +303,52 @@ function Add-ShimsDirToPath {
         # For current session
         $env:PATH = "$SCOOP_SHIMS_DIR;$env:PATH"
     }
+}
+
+function Get-Env {
+    param(
+        [String] $name,
+        [Switch] $global
+    )
+
+    $target = if ($global) { 'Machine' } else { 'User' }
+    return [Environment]::GetEnvironmentVariable($name, $target)
+}
+
+function Add-Config {
+    # If user-level SCOOP env not defined, save to rootPath
+    if (!(Get-Env 'SCOOP' $false)) {
+        if ($SCOOP_DIR -ne "$env:USERPROFILE\scoop") {
+            scoop config 'rootPath' $SCOOP_DIR
+        }
+    }
+
+    # Use system SCOOP_GLOBAL, or set system SCOOP_GLOBAL
+    # with $env:SCOOP_GLOBAL if RunAsAdmin, otherwise save to globalPath
+    if (!(Get-Env 'SCOOP_GLOBAL' $true)) {
+        if ((Test-IsAdministrator) -and $env:SCOOP_GLOBAL) {
+            [Environment]::SetEnvironmentVariable('SCOOP_GLOBAL', $env:SCOOP_GLOBAL, 'Machine')
+        } else {
+            if ($SCOOP_GLOBAL_DIR -ne "$env:ProgramData\scoop") {
+                scoop config 'globalPath' $SCOOP_GLOBAL_DIR
+            }
+        }
+    }
+
+    # Use system SCOOP_CACHE, or set system SCOOP_CACHE
+    # with $env:SCOOP_CACHE if RunAsAdmin, otherwise save to cachePath
+    if (!(Get-Env 'SCOOP_CACHE' $true)) {
+        if ((Test-IsAdministrator) -and $env:SCOOP_CACHE) {
+            [Environment]::SetEnvironmentVariable('SCOOP_CACHE', $env:SCOOP_CACHE, 'Machine')
+        } else {
+            if ($SCOOP_CACHE_DIR -ne "$SCOOP_DIR\cache") {
+                scoop config 'cachePath' $SCOOP_CACHE_DIR
+            }
+        }
+    }
+
+    # save current datatime to lastUpdate
+    scoop config 'lastUpdate' ([System.DateTime]::Now.ToString('o'))
 }
 
 function Install-Scoop {
@@ -333,12 +392,12 @@ function Install-Scoop {
 
     # Create the scoop shim
     Write-Output 'Creating shim...'
-    Import-ScoopShim "$SCOOP_APP_DIR\bin\scoop.ps1"
+    Import-ScoopShim
 
     # Finially ensure scoop shims is in the PATH
     Add-ShimsDirToPath
-    # Setup 'lastupdate' config
-    scoop config lastupdate ([System.DateTime]::Now.ToString('o'))
+    # Setup initial configuration of Scoop
+    Add-Config
 
     Write-Host 'Scoop was installed successfully!' -f DarkGreen
     Write-Output "Type 'scoop help' for instructions."

@@ -1,6 +1,3 @@
-# The PowerShell Script Analyzer will generate a warning
-# diagnostic record for this file due to a bug -
-# https://github.com/PowerShell/PSScriptAnalyzer/issues/472
 @{
     # Only diagnostic records of the specified severity will be generated.
     # Uncomment the following line if you only want Errors and Warnings but
@@ -32,6 +29,8 @@
         'PSAvoidUsingInvokeExpression',
         # PSUseDeclaredVarsMoreThanAssignments doesn't currently work due to:
         # https://github.com/PowerShell/PSScriptAnalyzer/issues/636
-        'PSUseDeclaredVarsMoreThanAssignments'
+        'PSUseDeclaredVarsMoreThanAssignments',
+        # Do not check functions whose verbs change system state
+        'PSUseShouldProcessForStateChangingFunctions'
     )
 }
