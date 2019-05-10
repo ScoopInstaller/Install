@@ -219,7 +219,7 @@ function Test-isFileLocked {
     }
 }
 
-function Expand-Zipfile {
+function Expand-ZipArchive {
     param(
         [String] $path,
         [String] $to
@@ -377,11 +377,11 @@ function Install-Scoop {
     Write-Output 'Extracting...'
     # 1. extract scoop
     $scoopUnzipTempDir = "$SCOOP_APP_DIR\_tmp"
-    Expand-Zipfile $scoopZipfile $scoopUnzipTempDir
+    Expand-ZipArchive $scoopZipfile $scoopUnzipTempDir
     Copy-Item "$scoopUnzipTempDir\scoop-*\*" $SCOOP_APP_DIR -Recurse -Force
     # 2. extract scoop main bucket
     $scoopMainUnzipTempDir = "$SCOOP_MAIN_BUCKET_DIR\_tmp"
-    Expand-Zipfile $scoopMainZipfile $scoopMainUnzipTempDir
+    Expand-ZipArchive $scoopMainZipfile $scoopMainUnzipTempDir
     Copy-Item "$scoopMainUnzipTempDir\scoop-main-*\*" $SCOOP_MAIN_BUCKET_DIR -Recurse -Force
 
     # Cleanup
