@@ -81,7 +81,7 @@ $SCOOP_MAIN_BUCKET_DIR = "$SCOOP_DIR\buckets\main"
 
 # TODO: Use a specific version of Scoop and the main bucket
 $SCOOP_PACKAGE_REPO = "https://github.com/lukesampson/scoop/archive/master.zip"
-$SCOOP_MAIN_BUCKET_REPO = "https://github.com/scoopinstaller/scoop-main/archive/master.zip"
+$SCOOP_MAIN_BUCKET_REPO = "https://github.com/ScoopInstaller/Main/archive/master.zip"
 
 function Deny-Install {
     param(
@@ -389,7 +389,7 @@ function Install-Scoop {
     # 2. extract scoop main bucket
     $scoopMainUnzipTempDir = "$SCOOP_MAIN_BUCKET_DIR\_tmp"
     Expand-ZipArchive $scoopMainZipfile $scoopMainUnzipTempDir
-    Copy-Item "$scoopMainUnzipTempDir\scoop-main-*\*" $SCOOP_MAIN_BUCKET_DIR -Recurse -Force
+    Copy-Item "$scoopMainUnzipTempDir\Main-*\*" $SCOOP_MAIN_BUCKET_DIR -Recurse -Force
 
     # Cleanup
     Remove-Item $scoopUnzipTempDir -Recurse -Force
