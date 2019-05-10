@@ -119,12 +119,12 @@ function Test-IsAdministrator {
 function Test-Prerequisite {
     # Scoop requires PowerShell 5 at least
     if (($PSVersionTable.PSVersion.Major) -lt 5) {
-        Deny-Install "PowerShell 5 or greater is required to run Scoop. Go to https://docs.microsoft.com/en-us/powershell/ to get the latest version of PowerShell."
+        Deny-Install "PowerShell 5 or later is required to run Scoop. Go to https://microsoft.com/powershell to get the latest version of PowerShell."
     }
 
     # Scoop requires TLS 1.2 SecurityProtocol, which exists in .NET Framework 4.5+
     if ([System.Enum]::GetNames([System.Net.SecurityProtocolType]) -notcontains 'Tls12') {
-        Deny-Install "Scoop requires .NET Framework 4.5+ to work. Go to https://www.microsoft.com/net/download to get the latest version of .NET Framework."
+        Deny-Install "Scoop requires .NET Framework 4.5+ to work. Go to https://microsoft.com/net/download to get the latest version of .NET Framework."
     }
 
     # Ensure Robocopy.exe is accessible
@@ -249,6 +249,7 @@ function Expand-ZipArchive {
 }
 
 function Import-ScoopShim {
+    # The scoop executable
     $path = "$SCOOP_APP_DIR\bin\scoop.ps1"
 
     if (!(Test-Path $SCOOP_SHIMS_DIR)) {
@@ -284,13 +285,26 @@ powershell -noprofile -ex unrestricted `"& '$path' %args%;exit `$lastexitcode`""
     Write-Output "#!/bin/sh`npowershell.exe -ex unrestricted `"$path`" `"$@`"" | Out-File $shim -Encoding ascii
 }
 
+function Get-Env {
+    param(
+        [String] $name,
+        [Switch] $global
+    )
+
+    $target = if ($global) { 'Machine' } else { 'User' }
+    return [Environment]::GetEnvironmentVariable($name, $target)
+}
+
 function Add-ShimsDirToPath {
     # Get $env:PATH of current user
-    $userEnvPath = [System.Environment]::GetEnvironmentVariable('PATH', 'User')
+    $userEnvPath = Get-Env 'PATH' $false
 
     if ($userEnvPath -notmatch [Regex]::Escape($SCOOP_SHIMS_DIR)) {
         $h = (Get-PsProvider 'FileSystem').Home
-        if (!$h.endswith('\')) { $h += '\' }
+        if (!$h.EndsWith('\')) {
+            $h += '\'
+        }
+
         if (!($h -eq '\')) {
             $friendlyPath = "$SCOOP_SHIMS_DIR" -Replace ([Regex]::Escape($h)), "~\"
             Write-Output "Adding $friendlyPath to your path."
@@ -303,16 +317,6 @@ function Add-ShimsDirToPath {
         # For current session
         $env:PATH = "$SCOOP_SHIMS_DIR;$env:PATH"
     }
-}
-
-function Get-Env {
-    param(
-        [String] $name,
-        [Switch] $global
-    )
-
-    $target = if ($global) { 'Machine' } else { 'User' }
-    return [Environment]::GetEnvironmentVariable($name, $target)
 }
 
 function Add-Config {
@@ -353,8 +357,11 @@ function Add-Config {
 
 function Install-Scoop {
     Write-Output 'Initializing...'
+    # Validate install parameters
     Test-ValidateParameter
+    # Check prerequisites
     Test-Prerequisite
+    # Enable TLS 1.2
     Optimize-SecurityProtocol
 
     # Download scoop zip from GitHub

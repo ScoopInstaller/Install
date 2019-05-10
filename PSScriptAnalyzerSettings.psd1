@@ -31,6 +31,8 @@
         # https://github.com/PowerShell/PSScriptAnalyzer/issues/636
         'PSUseDeclaredVarsMoreThanAssignments',
         # Do not check functions whose verbs change system state
-        'PSUseShouldProcessForStateChangingFunctions'
+        'PSUseShouldProcessForStateChangingFunctions',
+        # Do not check positional parameters for scoop config command
+        'PSAvoidUsingPositionalParameters'
     )
 }
