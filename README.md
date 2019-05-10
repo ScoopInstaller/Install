@@ -3,10 +3,17 @@
 Installation
 ------------
 
-Run this command from your PowerShell to install scoop with default configuration,
-scoop will be install to `C:\Users\<user>\scoop`.
+**Prerequisites:**
+
+- Windows 7 SP1+ / Windows Server 2008+, Windows 10 recommended
+- [PowerShell 5](https://aka.ms/wmf5download) or later, [PowerShell Core](https://github.com/PowerShell/PowerShell) included
+- [.NET Framework 4.5](https://microsoft.com/net/download) or later
+- PowerShell execution policy must be enabled, e.g. `Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser`
 
 **Typical Installation**
+
+Run this command from your PowerShell to install scoop with default configuration,
+scoop will be install to `C:\Users\<user>\scoop`.
 
 ```powershell
 iwr -useb 'https://raw.githubusercontent.com/scoopinstaller/install/master/install.ps1' | iex
@@ -33,7 +40,7 @@ global programs to a custom directory, and bypass system proxy while installatio
 .\install.ps1 -ScoopDir 'D:\Applications\Scoop' -ScoopGlobalDir 'F:\GlobalScoopApps' -NoProxy
 ```
 
-Or, you can use the old way to configure custom directory by setting Environment Variables. (**Not Recommended**)
+Or you can use the legacy method to configure custom directory by setting Environment Variables. (**Not Recommended**)
 
 ```powershell
 $env:SCOOP='D:\Applications\Scoop'
@@ -42,6 +49,6 @@ iwr -useb 'https://raw.githubusercontent.com/scoopinstaller/install/master/insta
 
 ```powershell
 $env:SCOOP_GLOBAL='F:\GlobalScoopApps'
-[Environment]::SetEnvironmentVariable('SCOOP_GLOBAL',$env:SCOOP_GLOBAL,'Machine')
+[Environment]::SetEnvironmentVariable('SCOOP_GLOBAL', $env:SCOOP_GLOBAL, 'Machine')
 iwr -useb 'https://raw.githubusercontent.com/scoopinstaller/install/master/install.ps1' | iex
 ```
