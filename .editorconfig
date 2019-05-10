@@ -1,9 +1,5 @@
-# EditorConfig (is awesome): http://EditorConfig.org
-
-# * top-most EditorConfig file
 root = true
 
-# default style settings
 [*]
 charset = utf-8
 end_of_line = crlf
@@ -12,9 +8,5 @@ indent_style = space
 insert_final_newline = true
 trim_trailing_whitespace = true
 
-[*.{bat,cmd,[Bb][Aa][Tt],[Cc][Mm][Dd]]
-# DOS/Win *requires* BAT/CMD files to have CRLF newlines
-end_of_line = crlf
-
-[*.{yml, yaml}]
-indent_size = 2
+[*.md]
+trim_trailing_whitespace = false
