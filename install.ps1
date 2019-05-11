@@ -63,26 +63,6 @@ param(
     [Switch] $RunAsAdmin
 )
 
-# Prepare variables
-$IS_EXECUTED_FROM_IEX = ($null -eq $MyInvocation.MyCommand.Path)
-
-# Scoop root directory
-$SCOOP_DIR = $ScoopDir, $env:SCOOP, "$env:USERPROFILE\scoop" | Where-Object { $_ -ne "" } | Select-Object -first 1
-# Scoop global apps directory
-$SCOOP_GLOBAL_DIR = $ScoopGlobalDir, $env:SCOOP_GLOBAL, "$env:ProgramData\scoop" | Where-Object { $_ -ne "" } | Select-Object -first 1
-# Scoop cache directory
-$SCOOP_CACHE_DIR = $ScoopCacheDir, $env:SCOOP_CACHE, "$SCOOP_DIR\cache" | Where-Object { $_ -ne "" } | Select-Object -first 1
-# Scoop shims directory
-$SCOOP_SHIMS_DIR = "$SCOOP_DIR\shims"
-# Scoop itself directory
-$SCOOP_APP_DIR = "$SCOOP_DIR\apps\scoop\current"
-# Scoop main bucket directory
-$SCOOP_MAIN_BUCKET_DIR = "$SCOOP_DIR\buckets\main"
-
-# TODO: Use a specific version of Scoop and the main bucket
-$SCOOP_PACKAGE_REPO = "https://github.com/lukesampson/scoop/archive/master.zip"
-$SCOOP_MAIN_BUCKET_REPO = "https://github.com/ScoopInstaller/Main/archive/master.zip"
-
 function Deny-Install {
     param(
         [String] $message,
@@ -297,7 +277,7 @@ function Get-Env {
 
 function Add-ShimsDirToPath {
     # Get $env:PATH of current user
-    $userEnvPath = Get-Env 'PATH' $false
+    $userEnvPath = Get-Env 'PATH'
 
     if ($userEnvPath -notmatch [Regex]::Escape($SCOOP_SHIMS_DIR)) {
         $h = (Get-PsProvider 'FileSystem').Home
@@ -321,7 +301,7 @@ function Add-ShimsDirToPath {
 
 function Add-Config {
     # If user-level SCOOP env not defined, save to rootPath
-    if (!(Get-Env 'SCOOP' $false)) {
+    if (!(Get-Env 'SCOOP')) {
         if ($SCOOP_DIR -ne "$env:USERPROFILE\scoop") {
             scoop config 'rootPath' $SCOOP_DIR
         }
@@ -329,7 +309,7 @@ function Add-Config {
 
     # Use system SCOOP_GLOBAL, or set system SCOOP_GLOBAL
     # with $env:SCOOP_GLOBAL if RunAsAdmin, otherwise save to globalPath
-    if (!(Get-Env 'SCOOP_GLOBAL' $true)) {
+    if (!(Get-Env 'SCOOP_GLOBAL' -global)) {
         if ((Test-IsAdministrator) -and $env:SCOOP_GLOBAL) {
             [Environment]::SetEnvironmentVariable('SCOOP_GLOBAL', $env:SCOOP_GLOBAL, 'Machine')
         } else {
@@ -341,7 +321,7 @@ function Add-Config {
 
     # Use system SCOOP_CACHE, or set system SCOOP_CACHE
     # with $env:SCOOP_CACHE if RunAsAdmin, otherwise save to cachePath
-    if (!(Get-Env 'SCOOP_CACHE' $true)) {
+    if (!(Get-Env 'SCOOP_CACHE' -global)) {
         if ((Test-IsAdministrator) -and $env:SCOOP_CACHE) {
             [Environment]::SetEnvironmentVariable('SCOOP_CACHE', $env:SCOOP_CACHE, 'Machine')
         } else {
@@ -409,6 +389,26 @@ function Install-Scoop {
     Write-Host 'Scoop was installed successfully!' -f DarkGreen
     Write-Output "Type 'scoop help' for instructions."
 }
+
+# Prepare variables
+$IS_EXECUTED_FROM_IEX = ($null -eq $MyInvocation.MyCommand.Path)
+
+# Scoop root directory
+$SCOOP_DIR = $ScoopDir, $env:SCOOP, "$env:USERPROFILE\scoop" | Where-Object { $_ -ne "" } | Select-Object -First 1
+# Scoop global apps directory
+$SCOOP_GLOBAL_DIR = $ScoopGlobalDir, $env:SCOOP_GLOBAL, "$env:ProgramData\scoop" | Where-Object { $_ -ne "" } | Select-Object -First 1
+# Scoop cache directory
+$SCOOP_CACHE_DIR = $ScoopCacheDir, $env:SCOOP_CACHE, "$SCOOP_DIR\cache" | Where-Object { $_ -ne "" } | Select-Object -First 1
+# Scoop shims directory
+$SCOOP_SHIMS_DIR = "$SCOOP_DIR\shims"
+# Scoop itself directory
+$SCOOP_APP_DIR = "$SCOOP_DIR\apps\scoop\current"
+# Scoop main bucket directory
+$SCOOP_MAIN_BUCKET_DIR = "$SCOOP_DIR\buckets\main"
+
+# TODO: Use a specific version of Scoop and the main bucket
+$SCOOP_PACKAGE_REPO = "https://github.com/lukesampson/scoop/archive/master.zip"
+$SCOOP_MAIN_BUCKET_REPO = "https://github.com/ScoopInstaller/Main/archive/master.zip"
 
 # Quit if anything goes wrong
 $oldErrorActionPreference = $ErrorActionPreference
