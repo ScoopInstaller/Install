@@ -44,10 +44,6 @@ Or you can use the legacy method to configure custom directory by setting Enviro
 
 ```powershell
 $env:SCOOP='D:\Applications\Scoop'
-iwr -useb 'https://raw.githubusercontent.com/scoopinstaller/install/master/install.ps1' | iex
-```
-
-```powershell
 $env:SCOOP_GLOBAL='F:\GlobalScoopApps'
 [Environment]::SetEnvironmentVariable('SCOOP_GLOBAL', $env:SCOOP_GLOBAL, 'Machine')
 iwr -useb 'https://raw.githubusercontent.com/scoopinstaller/install/master/install.ps1' | iex
