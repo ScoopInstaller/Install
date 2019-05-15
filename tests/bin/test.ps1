@@ -37,7 +37,7 @@ if ($env:CI -eq $true) {
     }
 }
 
-Write-Host 'Invoke-Pester' @splat
+Write-Output 'Invoke-Pester' @splat
 $result = Invoke-Pester @splat
 
 if ($env:CI -eq $true) {

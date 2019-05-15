@@ -30,8 +30,8 @@ Describe -Tag 'Linter' "PSScriptAnalyzer" {
                         '*.ps1'  { $type = 'Script' }
                         '*.psd1' { $type = 'Manifest' }
                     }
-                    Write-Host -f Yellow "      [*] $($result.Severity): $($result.Message)"
-                    Write-Host -f Yellow "          $($result.RuleName) in $type`: $directory\$($result.ScriptName):$($result.Line)"
+                    Write-Warning "      [*] $($result.Severity): $($result.Message)"
+                    Write-Warning "          $($result.RuleName) in $type`: $directory\$($result.ScriptName):$($result.Line)"
                 }
             }
         }
