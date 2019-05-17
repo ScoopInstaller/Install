@@ -68,7 +68,7 @@ function Write-InstallInfo {
         [Parameter(Mandatory = $True, Position = 0)]
         $String,
         [Parameter(Mandatory = $False, Position = 1)]
-        $ForegroundColor
+        [System.ConsoleColor] $ForegroundColor
     )
 
     $backup = $host.UI.RawUI.ForegroundColor
