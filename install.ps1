@@ -66,7 +66,7 @@ param(
 function Write-InstallInfo {
     param(
         [Parameter(Mandatory = $True, Position = 0)]
-        $String,
+        [String] $String,
         [Parameter(Mandatory = $False, Position = 1)]
         [System.ConsoleColor] $ForegroundColor = $host.UI.RawUI.ForegroundColor
     )
