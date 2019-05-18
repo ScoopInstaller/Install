@@ -63,14 +63,33 @@ param(
     [Switch] $RunAsAdmin
 )
 
+function Write-InstallInfo {
+    param(
+        [Parameter(Mandatory = $True, Position = 0)]
+        [String] $String,
+        [Parameter(Mandatory = $False, Position = 1)]
+        [System.ConsoleColor] $ForegroundColor = $host.UI.RawUI.ForegroundColor
+    )
+
+    $backup = $host.UI.RawUI.ForegroundColor
+
+    if ($ForegroundColor -ne $host.UI.RawUI.ForegroundColor) {
+        $host.UI.RawUI.ForegroundColor = $ForegroundColor
+    }
+
+    Write-Output "$String"
+
+    $host.UI.RawUI.ForegroundColor = $backup
+}
+
 function Deny-Install {
     param(
         [String] $message,
         [Int] $errorCode = 1
     )
 
-    Write-Host $message -f DarkRed
-    Write-Output "Abort."
+    Write-InstallInfo -String $message -ForegroundColor DarkRed
+    Write-InstallInfo "Abort."
 
     # Don't abort if invoked with iex that would close the PS session
     if ($IS_EXECUTED_FROM_IEX) {
@@ -216,7 +235,7 @@ function Expand-ZipArchive {
             Deny-Install "Unzip failed: can't unzip because a process is locking the file."
         }
         if (Test-isFileLocked $path) {
-            Write-Output "Waiting for $path to be unlocked by another process... ($retries/10)"
+            Write-InstallInfo "Waiting for $path to be unlocked by another process... ($retries/10)"
             $retries++
             Start-Sleep -Seconds 2
         } else {
@@ -287,9 +306,9 @@ function Add-ShimsDirToPath {
 
         if (!($h -eq '\')) {
             $friendlyPath = "$SCOOP_SHIMS_DIR" -Replace ([Regex]::Escape($h)), "~\"
-            Write-Output "Adding $friendlyPath to your path."
+            Write-InstallInfo "Adding $friendlyPath to your path."
         } else {
-            Write-Output "Adding $SCOOP_SHIMS_DIR to your path."
+            Write-InstallInfo "Adding $SCOOP_SHIMS_DIR to your path."
         }
 
         # For future sessions
@@ -336,7 +355,7 @@ function Add-Config {
 }
 
 function Install-Scoop {
-    Write-Output 'Initializing...'
+    Write-InstallInfo "Initializing..."
     # Validate install parameters
     Test-ValidateParameter
     # Check prerequisites
@@ -345,7 +364,7 @@ function Install-Scoop {
     Optimize-SecurityProtocol
 
     # Download scoop zip from GitHub
-    Write-Output 'Downloading...'
+    Write-InstallInfo "Downloading..."
     $downloader = Get-Downloader
     # 1. download scoop
     $scoopZipfile = "$SCOOP_APP_DIR\scoop.zip"
@@ -361,7 +380,7 @@ function Install-Scoop {
     $downloader.downloadFile($SCOOP_MAIN_BUCKET_REPO, $scoopMainZipfile)
 
     # Extract files from downloaded zip
-    Write-Output 'Extracting...'
+    Write-InstallInfo "Extracting..."
     # 1. extract scoop
     $scoopUnzipTempDir = "$SCOOP_APP_DIR\_tmp"
     Expand-ZipArchive $scoopZipfile $scoopUnzipTempDir
@@ -378,7 +397,7 @@ function Install-Scoop {
     Remove-Item $scoopMainZipfile
 
     # Create the scoop shim
-    Write-Output 'Creating shim...'
+    Write-InstallInfo "Creating shim..."
     Import-ScoopShim
 
     # Finially ensure scoop shims is in the PATH
@@ -386,8 +405,8 @@ function Install-Scoop {
     # Setup initial configuration of Scoop
     Add-Config
 
-    Write-Host 'Scoop was installed successfully!' -f DarkGreen
-    Write-Output "Type 'scoop help' for instructions."
+    Write-InstallInfo "Scoop was installed successfully!" -ForegroundColor DarkGreen
+    Write-InstallInfo "Type 'scoop help' for instructions."
 }
 
 # Prepare variables
