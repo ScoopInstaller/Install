@@ -48,3 +48,16 @@ $env:SCOOP_GLOBAL='F:\GlobalScoopApps'
 [Environment]::SetEnvironmentVariable('SCOOP_GLOBAL', $env:SCOOP_GLOBAL, 'Machine')
 iwr -useb 'https://raw.githubusercontent.com/scoopinstaller/install/master/install.ps1' | iex
 ```
+
+**Silent Installation**
+
+You can redirect all outputs to Out-Null or a log file to silence the installer. And you can use `$LASTEXITCODE` to check the installation result, it will be `0` when the installation success.
+
+```powershell
+# Omit outputs
+.\install.ps1 [-Parameters ...] | Out-Null
+# Or collect logs
+.\install.ps1 [-Parameters ...] > install.log
+# Get result
+$LASTEXITCODE
+```
