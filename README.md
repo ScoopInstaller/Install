@@ -1,27 +1,26 @@
 # Scoop (un)installer
 
-Installation
-------------
+## Installation
 
-**Prerequisites:**
+### Prerequisites
 
 - Windows 7 SP1+ / Windows Server 2008+, Windows 10 recommended
 - [PowerShell 5](https://aka.ms/wmf5download) or later, [PowerShell Core](https://github.com/PowerShell/PowerShell) included
 - [.NET Framework 4.5](https://microsoft.com/net/download) or later
 - PowerShell execution policy must be enabled, e.g. `Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser`
 
-**Typical Installation**
+### Typical Installation
 
-Run this command from your PowerShell to install scoop with default configuration,
-scoop will be install to `C:\Users\<user>\scoop`.
+Run this command from a **non-admin** PowerShell to install scoop with default configuration,
+scoop will be install to `C:\Users\<YOUR USERNAME>\scoop`.
 
 ```powershell
 iwr -useb 'https://raw.githubusercontent.com/scoopinstaller/install/master/install.ps1' | iex
 ```
 
-**Advanced Installation**
+### Advanced Installation
 
-If you want to have an advanced installation, You can download the installer and manually execute it with parameters.
+If you want to have an advanced installation. You can download the installer and manually execute it with parameters.
 
 ```powershell
 iwr -useb 'https://raw.githubusercontent.com/scoopinstaller/install/master/install.ps1' -outfile 'install.ps1'
@@ -49,7 +48,9 @@ $env:SCOOP_GLOBAL='F:\GlobalScoopApps'
 iwr -useb 'https://raw.githubusercontent.com/scoopinstaller/install/master/install.ps1' | iex
 ```
 
-**Silent Installation**
+**For Admin:** Installation under the administrator console has been disabled by default for security reason. If you know what you are doing and want to install Scoop as administrator. Please download the installer and manually execute it with the `-RunAsAdmin` parameter in an elevated console.
+
+### Silent Installation
 
 You can redirect all outputs to Out-Null or a log file to silence the installer. And you can use `$LASTEXITCODE` to check the installation result, it will be `0` when the installation success.
 
