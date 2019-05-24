@@ -48,7 +48,12 @@ $env:SCOOP_GLOBAL='F:\GlobalScoopApps'
 iwr -useb 'https://raw.githubusercontent.com/scoopinstaller/install/master/install.ps1' | iex
 ```
 
-**For Admin:** Installation under the administrator console has been disabled by default for security reason. If you know what you are doing and want to install Scoop as administrator. Please download the installer and manually execute it with the `-RunAsAdmin` parameter in an elevated console.
+**For Admin:** Installation under the administrator console has been disabled by default for security reason. If you know what you are doing and want to install Scoop as administrator. Please download the installer and manually execute it with the `-RunAsAdmin` parameter in an elevated console. Here is the example:
+
+```powershell
+iwr -useb 'https://raw.githubusercontent.com/scoopinstaller/install/master/install.ps1' -outfile 'install.ps1'
+.\install.ps1 -RunAsAdmin
+```
 
 ### Silent Installation
 
