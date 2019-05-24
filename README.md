@@ -52,7 +52,7 @@ iwr -useb 'https://raw.githubusercontent.com/scoopinstaller/install/master/insta
 
 ```powershell
 iwr -useb 'https://raw.githubusercontent.com/scoopinstaller/install/master/install.ps1' -outfile 'install.ps1'
-.\install.ps1 -RunAsAdmin
+.\install.ps1 -RunAsAdmin [-OtherParameters ...]
 ```
 
 ### Silent Installation
