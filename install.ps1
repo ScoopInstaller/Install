@@ -312,17 +312,66 @@ function Add-ShimsDirToPath {
         }
 
         # For future sessions
-        [System.Environment]::SetEnvironmentVariable('PATH', $SCOOP_SHIMS_DIR, 'User')
+        [System.Environment]::SetEnvironmentVariable('PATH', "$SCOOP_SHIMS_DIR;$userEnvPath", 'User')
         # For current session
         $env:PATH = "$SCOOP_SHIMS_DIR;$env:PATH"
     }
 }
 
+function Use-Config {
+    if (!(Test-Path $SCOOP_CONFIG_FILE)) {
+        return $null
+    }
+
+    try {
+        return (Get-Content $SCOOP_CONFIG_FILE -Raw | ConvertFrom-Json -ErrorAction Stop)
+    } catch {
+        Deny-Install "ERROR loading $SCOOP_CONFIG_FILE`: $($_.Exception.Message)"
+    }
+}
+
 function Add-Config {
+    param (
+        [Parameter(Mandatory = $True, Position = 0)]
+        [String] $Name,
+        [Parameter(Mandatory = $True, Position = 1)]
+        [String] $Value
+    )
+
+    $scoopConfig = Use-Config
+
+    if ($null -eq $scoopConfig -or $scoopConfig.Count -eq 0) {
+        $baseDir = Split-Path -Path $SCOOP_CONFIG_FILE
+        if (!(Test-Path $baseDir)) {
+            New-Item -Type Directory $baseDir | Out-Null
+        }
+
+        $scoopConfig = New-Object PSObject
+        $scoopConfig | Add-Member -MemberType NoteProperty -Name $Name -Value $Value
+    } else {
+        if ($Value -eq [bool]::TrueString -or $Value -eq [bool]::FalseString) {
+            $Value = [System.Convert]::ToBoolean($Value)
+        }
+        if ($null -eq $scoopConfig.$Name) {
+            $scoopConfig | Add-Member -MemberType NoteProperty -Name $Name -Value $Value
+        } else {
+            $scoopConfig.$Name = $Value
+        }
+    }
+
+    if ($null -eq $Value) {
+        $scoopConfig.PSObject.Properties.Remove($Name)
+    }
+
+    ConvertTo-Json $scoopConfig | Set-Content $SCOOP_CONFIG_FILE -Encoding ASCII
+    return $scoopConfig
+}
+
+function Add-DefaultConfig {
     # If user-level SCOOP env not defined, save to rootPath
     if (!(Get-Env 'SCOOP')) {
         if ($SCOOP_DIR -ne "$env:USERPROFILE\scoop") {
-            scoop config 'rootPath' $SCOOP_DIR
+            Add-Config -Name 'rootPath' -Value $SCOOP_DIR | Out-Null
         }
     }
 
@@ -333,7 +382,7 @@ function Add-Config {
             [Environment]::SetEnvironmentVariable('SCOOP_GLOBAL', $env:SCOOP_GLOBAL, 'Machine')
         } else {
             if ($SCOOP_GLOBAL_DIR -ne "$env:ProgramData\scoop") {
-                scoop config 'globalPath' $SCOOP_GLOBAL_DIR
+                Add-Config -Name 'globalPath' -Value $SCOOP_GLOBAL_DIR | Out-Null
             }
         }
     }
@@ -345,13 +394,13 @@ function Add-Config {
             [Environment]::SetEnvironmentVariable('SCOOP_CACHE', $env:SCOOP_CACHE, 'Machine')
         } else {
             if ($SCOOP_CACHE_DIR -ne "$SCOOP_DIR\cache") {
-                scoop config 'cachePath' $SCOOP_CACHE_DIR
+                Add-Config -Name 'cachePath' -Value $SCOOP_CACHE_DIR | Out-Null
             }
         }
     }
 
     # save current datatime to lastUpdate
-    scoop config 'lastUpdate' ([System.DateTime]::Now.ToString('o'))
+    Add-Config -Name 'lastUpdate' -Value ([System.DateTime]::Now.ToString('o')) | Out-Null
 }
 
 function Install-Scoop {
@@ -403,7 +452,7 @@ function Install-Scoop {
     # Finially ensure scoop shims is in the PATH
     Add-ShimsDirToPath
     # Setup initial configuration of Scoop
-    Add-Config
+    Add-DefaultConfig
 
     Write-InstallInfo "Scoop was installed successfully!" -ForegroundColor DarkGreen
     Write-InstallInfo "Type 'scoop help' for instructions."
@@ -424,6 +473,9 @@ $SCOOP_SHIMS_DIR = "$SCOOP_DIR\shims"
 $SCOOP_APP_DIR = "$SCOOP_DIR\apps\scoop\current"
 # Scoop main bucket directory
 $SCOOP_MAIN_BUCKET_DIR = "$SCOOP_DIR\buckets\main"
+# Scoop config file location
+$SCOOP_CONFIG_HOME = $env:XDG_CONFIG_HOME, "$env:USERPROFILE\.config" | Select-Object -First 1
+$SCOOP_CONFIG_FILE = "$SCOOP_CONFIG_HOME\scoop\config.json"
 
 # TODO: Use a specific version of Scoop and the main bucket
 $SCOOP_PACKAGE_REPO = "https://github.com/lukesampson/scoop/archive/master.zip"
