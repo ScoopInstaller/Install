@@ -137,8 +137,9 @@ function Test-Prerequisite {
     }
 
     # Show notification to change execution policy
-    if ((Get-ExecutionPolicy) -gt 'RemoteSigned' -or (Get-ExecutionPolicy) -eq 'ByPass') {
-        Deny-Install "PowerShell requires an execution policy of 'RemoteSigned' to install Scoop. To change this please run 'Set-ExecutionPolicy RemoteSigned -Scope CurrentUser'."
+    $allowedExecutionPolicy = @('Unrestricted', 'RemoteSigned', 'ByPass')
+    if ((Get-ExecutionPolicy).ToString() -notin $allowedExecutionPolicy) {
+        Deny-Install "PowerShell requires an execution policy in [$($allowedExecutionPolicy -join ", ")] to run Scoop. For example, to set the execution policy to 'RemoteSigned' please run 'Set-ExecutionPolicy RemoteSigned -Scope CurrentUser'."
     }
 
     # Test if scoop is installed, by checking if scoop command exists.
