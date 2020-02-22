@@ -339,7 +339,7 @@ function Add-Config {
         [String] $Value
     )
 
-    $scoopConfig = Use-Config
+    $scoopConfig = @(Use-Config)
 
     if ($null -eq $scoopConfig -or $scoopConfig.Count -eq 0) {
         $baseDir = Split-Path -Path $SCOOP_CONFIG_FILE
