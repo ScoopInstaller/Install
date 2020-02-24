@@ -52,6 +52,7 @@
 .LINK
     https://github.com/lukesampson/scoop/wiki
 #>
+Set-StrictMode -Off
 param(
     [String] $ScoopDir,
     [String] $ScoopGlobalDir,
@@ -339,17 +340,9 @@ function Add-Config {
         [String] $Value
     )
 
-    $scoopConfig = @(Use-Config)
-
-    if ($null -eq $scoopConfig -or $scoopConfig.Count -eq 0) {
-        $baseDir = Split-Path -Path $SCOOP_CONFIG_FILE
-        if (!(Test-Path $baseDir)) {
-            New-Item -Type Directory $baseDir | Out-Null
-        }
-
-        $scoopConfig = New-Object PSObject
-        $scoopConfig | Add-Member -MemberType NoteProperty -Name $Name -Value $Value
-    } else {
+    $scoopConfig = Use-Config
+    
+    if ($scoopConfig -is [System.Management.Automation.PSObject]) {
         if ($Value -eq [bool]::TrueString -or $Value -eq [bool]::FalseString) {
             $Value = [System.Convert]::ToBoolean($Value)
         }
@@ -358,6 +351,14 @@ function Add-Config {
         } else {
             $scoopConfig.$Name = $Value
         }
+    } else {
+        $baseDir = Split-Path -Path $SCOOP_CONFIG_FILE
+        if (!(Test-Path $baseDir)) {
+            New-Item -Type Directory $baseDir | Out-Null
+        }
+
+        $scoopConfig = New-Object PSObject
+        $scoopConfig | Add-Member -MemberType NoteProperty -Name $Name -Value $Value
     }
 
     if ($null -eq $Value) {
