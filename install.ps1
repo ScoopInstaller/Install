@@ -52,7 +52,6 @@
 .LINK
     https://github.com/lukesampson/scoop/wiki
 #>
-Set-StrictMode -Off
 param(
     [String] $ScoopDir,
     [String] $ScoopGlobalDir,
@@ -63,6 +62,9 @@ param(
     [Switch] $ProxyUseDefaultCredentials,
     [Switch] $RunAsAdmin
 )
+
+# Disable StrictMode in this script
+Set-StrictMode -Off
 
 function Write-InstallInfo {
     param(
