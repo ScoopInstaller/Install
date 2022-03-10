@@ -1,3 +1,6 @@
+# Issue Tracker: https://github.com/ScoopInstaller/Install/issues
+# Unlicense License:
+#
 # This is free and unencumbered software released into the public domain.
 #
 # Anyone is free to copy, modify, publish, use, compile, sell, or
@@ -29,20 +32,20 @@
 .DESCRIPTION
     The installer of Scoop. For details please check the website and wiki.
 .PARAMETER ScoopDir
-    Specifies directory to install.
-    Scoop will be installed to '$env:USERPROFILE\scoop' if not specificed.
+    Specifies Scoop root path.
+    If not specified, Scoop will be installed to '$env:USERPROFILE\scoop'.
 .PARAMETER ScoopGlobalDir
-    Specifies global app directory.
-    Global app will be installed to '$env:ProgramData\scoop' if not specificed.
+    Specifies directory to store global apps.
+    If not specified, global apps will be installed to '$env:ProgramData\scoop'.
 .PARAMETER ScoopCacheDir
     Specifies cache directory.
-    Cache directory will be '$ScoopDir\cache' if not specificed.
+    If not specified, caches will be downloaded to '$ScoopDir\cache'.
 .PARAMETER NoProxy
-    Specifies bypass system proxy or not while installation.
+    Bypass system proxy during the installation.
 .PARAMETER Proxy
-    Specifies proxy to use while installation.
+    Specifies proxy to use during the installation.
 .PARAMETER ProxyCredential
-    Specifies credential for the prxoy.
+    Specifies credential for the given prxoy.
 .PARAMETER ProxyUseDefaultCredentials
     Use the credentials of the current user for the proxy server that is specified by the -Proxy parameter.
 .PARAMETER RunAsAdmin
@@ -114,7 +117,7 @@ function Test-ValidateParameter {
 
 function Test-IsAdministrator {
     return ([Security.Principal.WindowsPrincipal]`
-    [Security.Principal.WindowsIdentity]::GetCurrent()`
+            [Security.Principal.WindowsIdentity]::GetCurrent()`
     ).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
 }
 
@@ -136,7 +139,7 @@ function Test-Prerequisite {
 
     # Detect if RunAsAdministrator, there is no need to run as administrator when installing Scoop.
     if (!$RunAsAdmin -and (Test-IsAdministrator)) {
-        Deny-Install "Running the installer as administrator is disabled by default, use -RunAsAdmin parameter if you know what you are doing."
+        Deny-Install "Running the installer as administrator is disabled by default, see https://github.com/ScoopInstaller/Install#readme for details."
     }
 
     # Show notification to change execution policy
@@ -215,8 +218,7 @@ function Test-isFileLocked {
             $stream.Close()
         }
         return $false
-    }
-    catch {
+    } catch {
         # The file is locked by a process.
         return $true
     }
@@ -251,6 +253,33 @@ function Expand-ZipArchive {
     Microsoft.PowerShell.Archive\Expand-Archive -Path $path -DestinationPath $to -Force
 }
 
+function Out-UTF8File {
+    param(
+        [Parameter(Mandatory = $True, Position = 0)]
+        [Alias("Path")]
+        [String] $FilePath,
+        [Switch] $Append,
+        [Switch] $NoNewLine,
+        [Parameter(ValueFromPipeline = $True)]
+        [PSObject] $InputObject
+    )
+    process {
+        if ($Append) {
+            [System.IO.File]::AppendAllText($FilePath, $InputObject)
+        } else {
+            if (!$NoNewLine) {
+                # Ref: https://stackoverflow.com/questions/5596982
+                # Performance Note: `WriteAllLines` throttles memory usage while
+                # `WriteAllText` needs to keep the complete string in memory.
+                [System.IO.File]::WriteAllLines($FilePath, $InputObject)
+            } else {
+                # However `WriteAllText` does not add ending newline.
+                [System.IO.File]::WriteAllText($FilePath, $InputObject)
+            }
+        }
+    }
+}
+
 function Import-ScoopShim {
     # The scoop executable
     $path = "$SCOOP_APP_DIR\bin\scoop.ps1"
@@ -266,26 +295,55 @@ function Import-ScoopShim {
     Push-Location $SCOOP_SHIMS_DIR
     $relativePath = Resolve-Path -Relative $path
     Pop-Location
+    $absolutePath = Resolve-Path $path
 
-    # Setting PSScriptRoot in Shim if it is not defined, so the shim doesn't break in PowerShell 2.0
-    Write-Output "if (!(Test-Path Variable:PSScriptRoot)) { `$PSScriptRoot = Split-Path `$MyInvocation.MyCommand.Path -Parent }" | Out-File "$shim.ps1" -Encoding utf8
-    Write-Output "`$path = Join-Path `"`$PSScriptRoot`" `"$relativePath`"" | Out-File "$shim.ps1" -Encoding utf8 -Append
-    Write-Output "if (`$MyInvocation.ExpectingInput) { `$input | & `$path @args } else { & `$path @args }" | Out-File "$shim.ps1" -Encoding utf8 -Append
+    # if $path points to another drive resolve-path prepends .\ which could break shims
+    $ps1text = if ($relativePath -match '^(\.\\)?\w:.*$') {
+        @(
+            "# $absolutePath",
+            "`$path = `"$path`"",
+            "if (`$MyInvocation.ExpectingInput) { `$input | & `$path $arg @args } else { & `$path $arg @args }",
+            "exit `$LASTEXITCODE"
+        )
+    } else {
+        @(
+            "# $absolutePath",
+            "`$path = Join-Path `$PSScriptRoot `"$relativePath`"",
+            "if (`$MyInvocation.ExpectingInput) { `$input | & `$path $arg @args } else { & `$path $arg @args }",
+            "exit `$LASTEXITCODE"
+        )
+    }
+    $ps1text -join "`r`n" | Out-UTF8File "$shim.ps1"
 
-    # Make scoop accessible from cmd.exe
-    Write-Output "@echo off
-setlocal enabledelayedexpansion
-set args=%*
-:: replace problem characters in arguments
-set args=%args:`"='%
-set args=%args:(=``(%
-set args=%args:)=``)%
-set invalid=`"='
-if !args! == !invalid! ( set args= )
-powershell -noprofile -ex unrestricted `"& '$path' %args%;exit `$lastexitcode`"" | Out-File "$shim.cmd" -Encoding ascii
+    # make ps1 accessible from cmd.exe
+    @(
+        "@rem $absolutePath",
+        "@echo off",
+        "setlocal enabledelayedexpansion",
+        "set args=%*",
+        ":: replace problem characters in arguments",
+        "set args=%args:`"='%",
+        "set args=%args:(=``(%",
+        "set args=%args:)=``)%",
+        "set invalid=`"='",
+        "if !args! == !invalid! ( set args= )",
+        "where /q pwsh.exe",
+        "if %errorlevel% equ 0 (",
+        "    pwsh -noprofile -ex unrestricted -file `"$absolutePath`" $arg %args%",
+        ") else (",
+        "    powershell -noprofile -ex unrestricted -file `"$absolutePath`" $arg %args%",
+        ")"
+    ) -join "`r`n" | Out-UTF8File "$shim.cmd"
 
-    # Make scoop accessible from bash or other posix shell
-    Write-Output "#!/bin/sh`npowershell.exe -ex unrestricted `"$path`" `"$@`"" | Out-File $shim -Encoding ascii
+    @(
+        "#!/bin/sh",
+        "# $absolutePath",
+        "if command -v pwsh.exe > /dev/null 2>&1; then",
+        "    pwsh.exe -noprofile -ex unrestricted -file `"$absolutePath`" $arg $@",
+        "else",
+        "    powershell.exe -noprofile -ex unrestricted -file `"$absolutePath`" $arg $@",
+        "fi"
+    ) -join "`n" | Out-UTF8File $shim -NoNewLine
 }
 
 function Get-Env {
@@ -303,7 +361,7 @@ function Add-ShimsDirToPath {
     $userEnvPath = Get-Env 'PATH'
 
     if ($userEnvPath -notmatch [Regex]::Escape($SCOOP_SHIMS_DIR)) {
-        $h = (Get-PsProvider 'FileSystem').Home
+        $h = (Get-PSProvider 'FileSystem').Home
         if (!$h.EndsWith('\')) {
             $h += '\'
         }
@@ -343,7 +401,7 @@ function Add-Config {
     )
 
     $scoopConfig = Use-Config
-    
+
     if ($scoopConfig -is [System.Management.Automation.PSObject]) {
         if ($Value -eq [bool]::TrueString -or $Value -eq [bool]::FalseString) {
             $Value = [System.Convert]::ToBoolean($Value)
