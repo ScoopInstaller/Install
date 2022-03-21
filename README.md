@@ -4,11 +4,13 @@
 
 ### Prerequisites
 
-- Windows 7 SP1+ / Windows Server 2008+, Windows 10 recommended
-- [PowerShell 5](https://aka.ms/wmf5download) or later, [PowerShell Core](https://github.com/PowerShell/PowerShell) included
-- [.NET Framework 4.5](https://microsoft.com/net/download) or later
-- PowerShell execution policy in `Unrestricted`/`RemoteSigned`/`ByPass`, for example:
-  - `Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser`
+- [PowerShell](https://aka.ms/powershell) latest version or [Windows PowerShell 5.1](https://aka.ms/wmf5download)
+
+PowerShell execution policy is required to be one of: `Unrestricted`, `RemoteSigned` or `ByPass` to execute the installer. for example:
+
+```powershell
+Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
+```
 
 ### Typical Installation
 
