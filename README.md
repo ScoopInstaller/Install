@@ -4,11 +4,13 @@
 
 ### Prerequisites
 
-- Windows 7 SP1+ / Windows Server 2008+, Windows 10 recommended
-- [PowerShell 5](https://aka.ms/wmf5download) or later, [PowerShell Core](https://github.com/PowerShell/PowerShell) included
-- [.NET Framework 4.5](https://microsoft.com/net/download) or later
-- PowerShell execution policy in `Unrestricted`/`RemoteSigned`/`ByPass`, for example:
-  - `Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser`
+- [PowerShell](https://aka.ms/powershell) latest version or [Windows PowerShell 5.1](https://aka.ms/wmf5download)
+
+PowerShell execution policy is required to be one of: `Unrestricted`, `RemoteSigned` or `ByPass` to execute the installer. For example:
+
+```powershell
+Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
+```
 
 ### Typical Installation
 
@@ -51,7 +53,7 @@ iwr -useb get.scoop.sh | iex
 
 #### For Admin
 
-Installation under the administrator console has been disabled by default for security reason. If you know what you are doing and want to install Scoop as administrator. Please download the installer and manually execute it with the `-RunAsAdmin` parameter in an elevated console. Here is the example:
+Installation under the administrator console has been disabled by default for security considerations. If you know what you are doing and want to install Scoop as administrator. Please download the installer and manually execute it with the `-RunAsAdmin` parameter in an elevated console. Here is the example:
 
 ```powershell
 iwr -useb get.scoop.sh -outfile 'install.ps1'
