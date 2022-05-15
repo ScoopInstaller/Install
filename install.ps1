@@ -251,7 +251,7 @@ function Expand-ZipArchive {
     }
 
     # PowerShell 5+: use Expand-Archive to extract zip files
-    Microsoft.PowerShell.Archive\Expand-Archive -Path $path -DestinationPath $to -Force
+    Microsoft.PowerShell.Archive\Expand-Archive -Path $path -DestinationPath $to -Force -Verbose:$false
 }
 
 function Out-UTF8File {
