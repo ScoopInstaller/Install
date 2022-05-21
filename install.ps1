@@ -168,6 +168,7 @@ function Optimize-SecurityProtocol {
         # Set to TLS 1.2 (3072), then TLS 1.1 (768), and TLS 1.0 (192). Ssl3 has been superseded,
         # https://docs.microsoft.com/en-us/dotnet/api/system.net.securityprotocoltype?view=netframework-4.5
         [System.Net.ServicePointManager]::SecurityProtocol = 3072 -bor 768 -bor 192
+        Write-Verbose "SecurityProtocol has been updated to support TLS 1.2"
     }
 }
 
@@ -250,7 +251,7 @@ function Expand-ZipArchive {
     }
 
     # PowerShell 5+: use Expand-Archive to extract zip files
-    Microsoft.PowerShell.Archive\Expand-Archive -Path $path -DestinationPath $to -Force
+    Microsoft.PowerShell.Archive\Expand-Archive -Path $path -DestinationPath $to -Force -Verbose:$false
 }
 
 function Out-UTF8File {
@@ -281,6 +282,7 @@ function Out-UTF8File {
 }
 
 function Import-ScoopShim {
+    Write-InstallInfo "Creating shim..."
     # The scoop executable
     $path = "$SCOOP_APP_DIR\bin\scoop.ps1"
 
@@ -433,6 +435,7 @@ function Add-DefaultConfig {
     # If user-level SCOOP env not defined, save to rootPath
     if (!(Get-Env 'SCOOP')) {
         if ($SCOOP_DIR -ne "$env:USERPROFILE\scoop") {
+            Write-Verbose "Adding config rootPath: $SCOOP_DIR"
             Add-Config -Name 'rootPath' -Value $SCOOP_DIR | Out-Null
         }
     }
@@ -441,9 +444,11 @@ function Add-DefaultConfig {
     # with $env:SCOOP_GLOBAL if RunAsAdmin, otherwise save to globalPath
     if (!(Get-Env 'SCOOP_GLOBAL' -global)) {
         if ((Test-IsAdministrator) -and $env:SCOOP_GLOBAL) {
+            Write-Verbose "Setting System Environment Variable SCOOP_GLOBAL: $env:SCOOP_GLOBAL"
             [Environment]::SetEnvironmentVariable('SCOOP_GLOBAL', $env:SCOOP_GLOBAL, 'Machine')
         } else {
             if ($SCOOP_GLOBAL_DIR -ne "$env:ProgramData\scoop") {
+                Write-Verbose "Adding config globalPath: $SCOOP_GLOBAL_DIR"
                 Add-Config -Name 'globalPath' -Value $SCOOP_GLOBAL_DIR | Out-Null
             }
         }
@@ -453,9 +458,11 @@ function Add-DefaultConfig {
     # with $env:SCOOP_CACHE if RunAsAdmin, otherwise save to cachePath
     if (!(Get-Env 'SCOOP_CACHE' -global)) {
         if ((Test-IsAdministrator) -and $env:SCOOP_CACHE) {
+            Write-Verbose "Setting System Environment Variable SCOOP_CACHE: $env:SCOOP_CACHE"
             [Environment]::SetEnvironmentVariable('SCOOP_CACHE', $env:SCOOP_CACHE, 'Machine')
         } else {
             if ($SCOOP_CACHE_DIR -ne "$SCOOP_DIR\cache") {
+                Write-Verbose "Adding config cachePath: $SCOOP_CACHE_DIR"
                 Add-Config -Name 'cachePath' -Value $SCOOP_CACHE_DIR | Out-Null
             }
         }
@@ -482,22 +489,26 @@ function Install-Scoop {
     if (!(Test-Path $SCOOP_APP_DIR)) {
         New-Item -Type Directory $SCOOP_APP_DIR | Out-Null
     }
+    Write-Verbose "Downloading $SCOOP_PACKAGE_REPO to $scoopZipfile"
     $downloader.downloadFile($SCOOP_PACKAGE_REPO, $scoopZipfile)
     # 2. download scoop main bucket
     $scoopMainZipfile = "$SCOOP_MAIN_BUCKET_DIR\scoop-main.zip"
     if (!(Test-Path $SCOOP_MAIN_BUCKET_DIR)) {
         New-Item -Type Directory $SCOOP_MAIN_BUCKET_DIR | Out-Null
     }
+    Write-Verbose "Downloading $SCOOP_MAIN_BUCKET_REPO to $scoopMainZipfile"
     $downloader.downloadFile($SCOOP_MAIN_BUCKET_REPO, $scoopMainZipfile)
 
     # Extract files from downloaded zip
     Write-InstallInfo "Extracting..."
     # 1. extract scoop
     $scoopUnzipTempDir = "$SCOOP_APP_DIR\_tmp"
+    Write-Verbose "Extracting $scoopZipfile to $scoopUnzipTempDir"
     Expand-ZipArchive $scoopZipfile $scoopUnzipTempDir
     Copy-Item "$scoopUnzipTempDir\scoop-*\*" $SCOOP_APP_DIR -Recurse -Force
     # 2. extract scoop main bucket
     $scoopMainUnzipTempDir = "$SCOOP_MAIN_BUCKET_DIR\_tmp"
+    Write-Verbose "Extracting $scoopMainZipfile to $scoopMainUnzipTempDir"
     Expand-ZipArchive $scoopMainZipfile $scoopMainUnzipTempDir
     Copy-Item "$scoopMainUnzipTempDir\Main-*\*" $SCOOP_MAIN_BUCKET_DIR -Recurse -Force
 
@@ -508,9 +519,7 @@ function Install-Scoop {
     Remove-Item $scoopMainZipfile
 
     # Create the scoop shim
-    Write-InstallInfo "Creating shim..."
     Import-ScoopShim
-
     # Finially ensure scoop shims is in the PATH
     Add-ShimsDirToPath
     # Setup initial configuration of Scoop
@@ -518,6 +527,24 @@ function Install-Scoop {
 
     Write-InstallInfo "Scoop was installed successfully!" -ForegroundColor DarkGreen
     Write-InstallInfo "Type 'scoop help' for instructions."
+}
+
+function Write-DebugInfo {
+    param($BoundArgs)
+
+    Write-Verbose "-------- PSBoundParameters --------"
+    $BoundArgs.GetEnumerator() | ForEach-Object { Write-Verbose $_ }
+    Write-Verbose "-------- Environment Variables --------"
+    Write-Verbose "`$env:USERPROFILE: $env:USERPROFILE"
+    Write-Verbose "`$env:ProgramData: $env:ProgramData"
+    Write-Verbose "`$env:SCOOP: $env:SCOOP"
+    Write-Verbose "`$env:SCOOP_CACHE: $SCOOP_CACHE"
+    Write-Verbose "`$env:SCOOP_GLOBAL: $env:SCOOP_GLOBAL"
+    Write-Verbose "-------- Selected Variables --------"
+    Write-Verbose "SCOOP_DIR: $SCOOP_DIR"
+    Write-Verbose "SCOOP_CACHE_DIR: $SCOOP_CACHE_DIR"
+    Write-Verbose "SCOOP_GLOBAL_DIR: $SCOOP_GLOBAL_DIR"
+    Write-Verbose "SCOOP_CONFIG_HOME: $SCOOP_CONFIG_HOME"
 }
 
 # Prepare variables
@@ -547,6 +574,8 @@ $SCOOP_MAIN_BUCKET_REPO = "https://github.com/ScoopInstaller/Main/archive/master
 $oldErrorActionPreference = $ErrorActionPreference
 $ErrorActionPreference = 'Stop'
 
+# Logging debug info
+Write-DebugInfo $PSBoundParameters
 # Bootstrap function
 Install-Scoop
 

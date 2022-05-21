@@ -18,9 +18,9 @@ Run this command from a **non-admin** PowerShell to install scoop with default c
 scoop will be install to `C:\Users\<YOUR USERNAME>\scoop`.
 
 ```powershell
-iwr get.scoop.sh | iex
+irm get.scoop.sh | iex
 # You can use proxies if you have network trouble in accessing GitHub, e.g.
-iwr get.scoop.sh -Proxy 'http://<ip:port>' | iex
+irm get.scoop.sh -Proxy 'http://<ip:port>' | iex
 ```
 
 ### Advanced Installation
@@ -28,7 +28,7 @@ iwr get.scoop.sh -Proxy 'http://<ip:port>' | iex
 If you want to have an advanced installation. You can download the installer and manually execute it with parameters.
 
 ```powershell
-iwr get.scoop.sh -outfile 'install.ps1'
+irm get.scoop.sh -outfile 'install.ps1'
 ```
 
 To see all configurable parameters of the installer.
@@ -50,7 +50,7 @@ Or you can use the legacy method to configure custom directory by setting Enviro
 $env:SCOOP='D:\Applications\Scoop'
 $env:SCOOP_GLOBAL='F:\GlobalScoopApps'
 [Environment]::SetEnvironmentVariable('SCOOP_GLOBAL', $env:SCOOP_GLOBAL, 'Machine')
-iwr get.scoop.sh | iex
+irm get.scoop.sh | iex
 ```
 
 #### For Admin
@@ -58,8 +58,10 @@ iwr get.scoop.sh | iex
 Installation under the administrator console has been disabled by default for security considerations. If you know what you are doing and want to install Scoop as administrator. Please download the installer and manually execute it with the `-RunAsAdmin` parameter in an elevated console. Here is the example:
 
 ```powershell
-iwr get.scoop.sh -outfile 'install.ps1'
+irm get.scoop.sh -outfile 'install.ps1'
 .\install.ps1 -RunAsAdmin [-OtherParameters ...]
+# I don't care about other parameters and want an one-line command
+iex "& {$(irm get.scoop.sh)} -RunAsAdmin"
 ```
 
 ### Silent Installation
