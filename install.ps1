@@ -250,8 +250,13 @@ function Expand-ZipArchive {
         }
     }
 
+    # Workaround to suspend Expand-Archive verbose output,
+    # upstream issue: https://github.com/PowerShell/Microsoft.PowerShell.Archive/issues/98
+    $oldVerbosePreference = $VerbosePreference
+    $global:VerbosePreference = 'SilentlyContinue'
     # PowerShell 5+: use Expand-Archive to extract zip files
-    Microsoft.PowerShell.Archive\Expand-Archive -Path $path -DestinationPath $to -Force -Verbose:$false
+    Microsoft.PowerShell.Archive\Expand-Archive -Path $path -DestinationPath $to -Force
+    $global:VerbosePreference = $oldVerbosePreference
 }
 
 function Out-UTF8File {
