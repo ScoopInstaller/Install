@@ -60,7 +60,7 @@ Installation under the administrator console has been disabled by default for se
 ```powershell
 irm get.scoop.sh -outfile 'install.ps1'
 .\install.ps1 -RunAsAdmin [-OtherParameters ...]
-# I don't care about other parameters and want an one-line command
+# I don't care about other parameters and want a one-line command
 iex "& {$(irm get.scoop.sh)} -RunAsAdmin"
 ```
 
