@@ -45,7 +45,7 @@
 .PARAMETER Proxy
     Specifies proxy to use during the installation.
 .PARAMETER ProxyCredential
-    Specifies credential for the given prxoy.
+    Specifies credential for the given proxy.
 .PARAMETER ProxyUseDefaultCredentials
     Use the credentials of the current user for the proxy server that is specified by the -Proxy parameter.
 .PARAMETER RunAsAdmin
@@ -539,15 +539,21 @@ function Install-Scoop {
     # Enable TLS 1.2
     Optimize-SecurityProtocol
 
+    # Download scoop from GitHub
+    Write-InstallInfo "Downloading ..."
+    $downloader = Get-Downloader
+
     if (Test-Command-Available('git')) {
+        if ($downloader.Proxy) {
+            #define env vars for git when behind a proxy
+            $Env:HTTP_PROXY = $downloader.Proxy.Address
+            $Env:HTTPS_PROXY = $downloader.Proxy.Address
+        }
         Write-Verbose "Cloning $SCOOP_PACKAGE_GIT_REPO to $SCOOP_APP_DIR"
         git clone $SCOOP_PACKAGE_GIT_REPO $SCOOP_APP_DIR
         Write-Verbose "Cloning $SCOOP_MAIN_BUCKET_GIT_REPO to $SCOOP_MAIN_BUCKET_DIR"
         git clone $SCOOP_MAIN_BUCKET_GIT_REPO $SCOOP_MAIN_BUCKET_DIR
     } else {
-        # Download scoop zip from GitHub
-        Write-InstallInfo "Downloading..."
-        $downloader = Get-Downloader
         # 1. download scoop
         $scoopZipfile = "$SCOOP_APP_DIR\scoop.zip"
         if (!(Test-Path $SCOOP_APP_DIR)) {
