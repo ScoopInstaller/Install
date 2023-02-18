@@ -254,9 +254,15 @@ function Expand-ZipArchive {
     # upstream issue: https://github.com/PowerShell/Microsoft.PowerShell.Archive/issues/98
     $oldVerbosePreference = $VerbosePreference
     $global:VerbosePreference = 'SilentlyContinue'
+
+    # Disable progress bar to gain performance
+    $oldProgressPreference = $ProgressPreference
+    $global:ProgressPreference = 'SilentlyContinue'
+
     # PowerShell 5+: use Expand-Archive to extract zip files
     Microsoft.PowerShell.Archive\Expand-Archive -Path $path -DestinationPath $to -Force
     $global:VerbosePreference = $oldVerbosePreference
+    $global:ProgressPreference = $oldProgressPreference
 }
 
 function Out-UTF8File {
