@@ -118,7 +118,7 @@ function Test-ValidateParameter {
 function Test-IsAdministrator {
     return ([Security.Principal.WindowsPrincipal]`
             [Security.Principal.WindowsIdentity]::GetCurrent()`
-    ).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
+    ).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator) -and $env:USERNAME -ne 'WDAGUtilityAccount'
 }
 
 function Test-Prerequisite {
