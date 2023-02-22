@@ -359,14 +359,51 @@ function Import-ScoopShim {
     ) -join "`n" | Out-UTF8File $shim -NoNewLine
 }
 
+function Handle-Env() {
+    param(
+        [String] $name,
+        [String] $val,
+        [Switch] $global
+    )
+
+    $RegisterKey = if ($global) {
+        Get-Item -Path 'HKLM:\SYSTEM\CurrentControlSet\Control\Session Manager'
+    } else {
+        Get-Item -Path 'HKCU:'
+    }
+
+    if ($val -eq '__get') {
+        $EnvRegisterKey = $RegisterKey.OpenSubKey('Environment')
+        $RegistryValueOption = [Microsoft.Win32.RegistryValueOptions]::DoNotExpandEnvironmentNames
+        return $EnvRegisterKey.GetValue($name, $null, $RegistryValueOption)
+    } else {
+        $EnvRegisterKey = $RegisterKey.OpenSubKey('Environment', $true)
+        $RegistryValueKind = if ($EnvRegisterKey.GetValue($name)) {
+            $EnvRegisterKey.GetValueKind($name)
+        } else {
+            [Microsoft.Win32.RegistryValueKind]::ExpandString
+        }
+        return $EnvRegisterKey.SetValue($name, $val, $RegistryValueKind)
+    }
+}
+
 function Get-Env {
     param(
         [String] $name,
         [Switch] $global
     )
 
-    $target = if ($global) { 'Machine' } else { 'User' }
-    return [Environment]::GetEnvironmentVariable($name, $target)
+    return Handle-Env $name '__get' -global:$global
+}
+
+function Set-Env {
+    param(
+        [String] $name,
+        [String] $val,
+        [Switch] $global
+    )
+
+    return Handle-Env $name $val -global:$global
 }
 
 function Add-ShimsDirToPath {
@@ -387,7 +424,7 @@ function Add-ShimsDirToPath {
         }
 
         # For future sessions
-        [System.Environment]::SetEnvironmentVariable('PATH', "$SCOOP_SHIMS_DIR;$userEnvPath", 'User')
+        Set-Env 'PATH' "$SCOOP_SHIMS_DIR;$userEnvPath"
         # For current session
         $env:PATH = "$SCOOP_SHIMS_DIR;$env:PATH"
     }
