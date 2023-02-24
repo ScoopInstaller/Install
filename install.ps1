@@ -359,7 +359,24 @@ function Import-ScoopShim {
     ) -join "`n" | Out-UTF8File $shim -NoNewLine
 }
 
-function Handle-Env() {
+function Get-Env {
+    param(
+        [String] $name,
+        [Switch] $global
+    )
+
+    $RegisterKey = if ($global) {
+        Get-Item -Path 'HKLM:\SYSTEM\CurrentControlSet\Control\Session Manager'
+    } else {
+        Get-Item -Path 'HKCU:'
+    }
+
+    $EnvRegisterKey = $RegisterKey.OpenSubKey('Environment')
+    $RegistryValueOption = [Microsoft.Win32.RegistryValueOptions]::DoNotExpandEnvironmentNames
+    $EnvRegisterKey.GetValue($name, $null, $RegistryValueOption)
+}
+
+function Set-Env {
     param(
         [String] $name,
         [String] $val,
@@ -372,38 +389,19 @@ function Handle-Env() {
         Get-Item -Path 'HKCU:'
     }
 
-    if ($val -eq '__get') {
-        $EnvRegisterKey = $RegisterKey.OpenSubKey('Environment')
-        $RegistryValueOption = [Microsoft.Win32.RegistryValueOptions]::DoNotExpandEnvironmentNames
-        return $EnvRegisterKey.GetValue($name, $null, $RegistryValueOption)
+    $EnvRegisterKey = $RegisterKey.OpenSubKey('Environment', $true)
+    if ($val -eq $null) {
+        $EnvRegisterKey.DeleteValue($name)
     } else {
-        $EnvRegisterKey = $RegisterKey.OpenSubKey('Environment', $true)
-        $RegistryValueKind = if ($EnvRegisterKey.GetValue($name)) {
+        $RegistryValueKind = if ($val.Contains('%')) {
+            [Microsoft.Win32.RegistryValueKind]::ExpandString
+        } elseif ($EnvRegisterKey.GetValue($name)) {
             $EnvRegisterKey.GetValueKind($name)
         } else {
-            [Microsoft.Win32.RegistryValueKind]::ExpandString
+            [Microsoft.Win32.RegistryValueKind]::String
         }
-        return $EnvRegisterKey.SetValue($name, $val, $RegistryValueKind)
+        $EnvRegisterKey.SetValue($name, $val, $RegistryValueKind)
     }
-}
-
-function Get-Env {
-    param(
-        [String] $name,
-        [Switch] $global
-    )
-
-    return Handle-Env $name '__get' -global:$global
-}
-
-function Set-Env {
-    param(
-        [String] $name,
-        [String] $val,
-        [Switch] $global
-    )
-
-    return Handle-Env $name $val -global:$global
 }
 
 function Add-ShimsDirToPath {
