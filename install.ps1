@@ -376,7 +376,7 @@ function Get-Env {
     $EnvRegisterKey.GetValue($name, $null, $RegistryValueOption)
 }
 
-function Set-Env {
+function Put-Env {
     param(
         [String] $name,
         [String] $val,
@@ -422,7 +422,7 @@ function Add-ShimsDirToPath {
         }
 
         # For future sessions
-        Set-Env 'PATH' "$SCOOP_SHIMS_DIR;$userEnvPath"
+        Put-Env 'PATH' "$SCOOP_SHIMS_DIR;$userEnvPath"
         # For current session
         $env:PATH = "$SCOOP_SHIMS_DIR;$env:PATH"
     }
