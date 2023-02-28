@@ -365,8 +365,43 @@ function Get-Env {
         [Switch] $global
     )
 
-    $target = if ($global) { 'Machine' } else { 'User' }
-    return [Environment]::GetEnvironmentVariable($name, $target)
+    $RegisterKey = if ($global) {
+        Get-Item -Path 'HKLM:\SYSTEM\CurrentControlSet\Control\Session Manager'
+    } else {
+        Get-Item -Path 'HKCU:'
+    }
+
+    $EnvRegisterKey = $RegisterKey.OpenSubKey('Environment')
+    $RegistryValueOption = [Microsoft.Win32.RegistryValueOptions]::DoNotExpandEnvironmentNames
+    $EnvRegisterKey.GetValue($name, $null, $RegistryValueOption)
+}
+
+function Write-Env {
+    param(
+        [String] $name,
+        [String] $val,
+        [Switch] $global
+    )
+
+    $RegisterKey = if ($global) {
+        Get-Item -Path 'HKLM:\SYSTEM\CurrentControlSet\Control\Session Manager'
+    } else {
+        Get-Item -Path 'HKCU:'
+    }
+
+    $EnvRegisterKey = $RegisterKey.OpenSubKey('Environment', $true)
+    if ($val -eq $null) {
+        $EnvRegisterKey.DeleteValue($name)
+    } else {
+        $RegistryValueKind = if ($val.Contains('%')) {
+            [Microsoft.Win32.RegistryValueKind]::ExpandString
+        } elseif ($EnvRegisterKey.GetValue($name)) {
+            $EnvRegisterKey.GetValueKind($name)
+        } else {
+            [Microsoft.Win32.RegistryValueKind]::String
+        }
+        $EnvRegisterKey.SetValue($name, $val, $RegistryValueKind)
+    }
 }
 
 function Add-ShimsDirToPath {
@@ -387,7 +422,7 @@ function Add-ShimsDirToPath {
         }
 
         # For future sessions
-        [System.Environment]::SetEnvironmentVariable('PATH', "$SCOOP_SHIMS_DIR;$userEnvPath", 'User')
+        Write-Env 'PATH' "$SCOOP_SHIMS_DIR;$userEnvPath"
         # For current session
         $env:PATH = "$SCOOP_SHIMS_DIR;$env:PATH"
     }
