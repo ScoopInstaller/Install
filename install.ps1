@@ -523,11 +523,7 @@ function Test-Command-Available {
         [Parameter(Mandatory = $True, Position = 0)]
         [String] $Command
     )
-    if (Get-Command $Command -ErrorAction SilentlyContinue) {
-        return $true
-    } else {
-        return $false
-    }
+    return [Boolean](Get-Command $Command -ErrorAction Ignore)
 }
 
 function Install-Scoop {
@@ -544,15 +540,24 @@ function Install-Scoop {
     $downloader = Get-Downloader
 
     if (Test-Command-Available('git')) {
-        if ($downloader.Proxy) {
-            #define env vars for git when behind a proxy
-            $Env:HTTP_PROXY = $downloader.Proxy.Address
-            $Env:HTTPS_PROXY = $downloader.Proxy.Address
+        $old_https = $env:HTTPS_PROXY
+        $old_http = $env:HTTP_PROXY
+        try {
+            if ($downloader.Proxy) {
+                #define env vars for git when behind a proxy
+                $Env:HTTP_PROXY = $downloader.Proxy.Address
+                $Env:HTTPS_PROXY = $downloader.Proxy.Address
+            }
+            Write-Verbose "Cloning $SCOOP_PACKAGE_GIT_REPO to $SCOOP_APP_DIR"
+            git clone $SCOOP_PACKAGE_GIT_REPO $SCOOP_APP_DIR
+            Write-Verbose "Cloning $SCOOP_MAIN_BUCKET_GIT_REPO to $SCOOP_MAIN_BUCKET_DIR"
+            git clone $SCOOP_MAIN_BUCKET_GIT_REPO $SCOOP_MAIN_BUCKET_DIR
+        } catch {
+            Get-Error $_
+        } finally {
+            $env:HTTPS_PROXY = $old_https
+            $env:HTTP_PROXY = $old_http
         }
-        Write-Verbose "Cloning $SCOOP_PACKAGE_GIT_REPO to $SCOOP_APP_DIR"
-        git clone $SCOOP_PACKAGE_GIT_REPO $SCOOP_APP_DIR
-        Write-Verbose "Cloning $SCOOP_MAIN_BUCKET_GIT_REPO to $SCOOP_MAIN_BUCKET_DIR"
-        git clone $SCOOP_MAIN_BUCKET_GIT_REPO $SCOOP_MAIN_BUCKET_DIR
     } else {
         # 1. download scoop
         $scoopZipfile = "$SCOOP_APP_DIR\scoop.zip"
