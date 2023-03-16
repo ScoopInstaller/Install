@@ -21,6 +21,14 @@ jobs:
       - name: Test Scoop Installer
         shell: powershell
         run: ./test/bin/test.ps1
+      - name: Test Scoop Install command
+        shell: powershell
+        run: |
+          ./install.ps1 -RunAsAdmin
+          echo "$Env:USERPROFILE\scoop\shims" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+      - name: Test scoop command availability
+        shell: powershell
+        run: scoop help
   test_pwsh:
     name: PowerShell
     runs-on: windows-latest
@@ -37,3 +45,11 @@ jobs:
       - name: Test Scoop Installer
         shell: pwsh
         run: ./test/bin/test.ps1
+      - name: Test Scoop Install command
+        shell: pwsh
+        run: |
+          ./install.ps1 -RunAsAdmin
+          echo "~\scoop\shims" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+      - name: Test scoop command availability
+        shell: pwsh
+        run: scoop help
