@@ -518,7 +518,7 @@ function Add-DefaultConfig {
     Add-Config -Name 'last_update' -Value ([System.DateTime]::Now.ToString('o')) | Out-Null
 }
 
-function Test-Command-Available {
+function Test-CommandAvailable {
     param (
         [Parameter(Mandatory = $True, Position = 0)]
         [String] $Command
@@ -539,7 +539,7 @@ function Install-Scoop {
     Write-InstallInfo "Downloading ..."
     $downloader = Get-Downloader
 
-    if (Test-Command-Available('git')) {
+    if (Test-CommandAvailable('git')) {
         $old_https = $env:HTTPS_PROXY
         $old_http = $env:HTTP_PROXY
         try {
@@ -549,9 +549,9 @@ function Install-Scoop {
                 $Env:HTTPS_PROXY = $downloader.Proxy.Address
             }
             Write-Verbose "Cloning $SCOOP_PACKAGE_GIT_REPO to $SCOOP_APP_DIR"
-            git clone $SCOOP_PACKAGE_GIT_REPO $SCOOP_APP_DIR
+            git clone -q $SCOOP_PACKAGE_GIT_REPO $SCOOP_APP_DIR
             Write-Verbose "Cloning $SCOOP_MAIN_BUCKET_GIT_REPO to $SCOOP_MAIN_BUCKET_DIR"
-            git clone $SCOOP_MAIN_BUCKET_GIT_REPO $SCOOP_MAIN_BUCKET_DIR
+            git clone -q $SCOOP_MAIN_BUCKET_GIT_REPO $SCOOP_MAIN_BUCKET_DIR
         } catch {
             Get-Error $_
         } finally {
