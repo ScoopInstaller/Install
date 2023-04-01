@@ -397,7 +397,7 @@ public static extern IntPtr SendMessageTimeout(
         2,
         5000,
         [ref] $result
-    )
+    ) | Out-Null
 }
 
 function Write-Env {
