@@ -386,8 +386,8 @@ public static extern IntPtr SendMessageTimeout(
 "@
     }
 
-    $HWND_BROADCAST = [IntPtr] 0xffff;
-    $WM_SETTINGCHANGE = 0x1a;
+    $HWND_BROADCAST = [IntPtr] 0xffff
+    $WM_SETTINGCHANGE = 0x1a
     $result = [UIntPtr]::Zero
 
     [Win32.Nativemethods]::SendMessageTimeout($HWND_BROADCAST,
@@ -425,8 +425,8 @@ function Write-Env {
             [Microsoft.Win32.RegistryValueKind]::String
         }
         $EnvRegisterKey.SetValue($name, $val, $RegistryValueKind)
-        Publish-Env
     }
+    Publish-Env
 }
 
 function Add-ShimsDirToPath {
