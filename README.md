@@ -38,7 +38,7 @@ To see all configurable parameters of the installer.
 ```
 
 For example, you could install scoop to a custom directory, configure scoop to install
-global programs to a custom directory, and bypass system proxy while installation.
+global programs to a custom directory, and bypass system proxy during installation.
 
 ```powershell
 .\install.ps1 -ScoopDir 'D:\Applications\Scoop' -ScoopGlobalDir 'F:\GlobalScoopApps' -NoProxy
