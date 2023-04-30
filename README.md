@@ -25,7 +25,7 @@ irm get.scoop.sh -Proxy 'http://<ip:port>' | iex
 
 ### Advanced Installation
 
-If you want to have an advanced installation. You can download the installer and manually execute it with parameters.
+If you want to have an advanced installation, you can download the installer and manually execute it with parameters.
 
 ```powershell
 irm get.scoop.sh -outfile 'install.ps1'
@@ -37,8 +37,8 @@ To see all configurable parameters of the installer.
 .\install.ps1 -?
 ```
 
-For example, install scoop to a custom directory, configure scoop to install
-global programs to a custom directory, and bypass system proxy while installation.
+For example, you could install scoop to a custom directory, configure scoop to install
+global programs to a custom directory, and bypass system proxy during installation.
 
 ```powershell
 .\install.ps1 -ScoopDir 'D:\Applications\Scoop' -ScoopGlobalDir 'F:\GlobalScoopApps' -NoProxy
