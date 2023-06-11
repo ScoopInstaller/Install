@@ -27,3 +27,16 @@ Describe 'Get-Downloader' -Tag 'Proxy' {
         }
     }
 }
+
+Describe 'Test-CommandAvailable' -Tag 'CommandLine' {
+    Context 'Command available' {
+        It 'Returns $true' {
+            Test-CommandAvailable -Command 'git' | Should -Be $true
+        }
+    }
+    Context 'Command not available' {
+        It 'Returns $false' {
+            Test-CommandAvailable -Command 'notavailable' | Should -Be $false
+        }
+    }
+}
