@@ -133,7 +133,7 @@ function Test-Prerequisite {
     }
 
     # Ensure Robocopy.exe is accessible
-    if (!([bool](Get-Command -Name 'robocopy' -ErrorAction SilentlyContinue))) {
+    if (!(Test-CommandAvailable('robocopy'))) {
         Deny-Install "Scoop requires 'C:\Windows\System32\Robocopy.exe' to work. Please make sure 'C:\Windows\System32' is in your PATH."
     }
 
@@ -149,7 +149,7 @@ function Test-Prerequisite {
     }
 
     # Test if scoop is installed, by checking if scoop command exists.
-    if ([bool](Get-Command -Name 'scoop' -ErrorAction SilentlyContinue)) {
+    if (Test-CommandAvailable('scoop')) {
         Deny-Install "Scoop is already installed. Run 'scoop update' to get the latest version."
     }
 }
@@ -548,7 +548,7 @@ function Test-CommandAvailable {
         [Parameter(Mandatory = $True, Position = 0)]
         [String] $Command
     )
-    return [Boolean](Get-Command $Command -ErrorAction Ignore)
+    return [Boolean](Get-Command $Command -ErrorAction SilentlyContinue)
 }
 
 function Install-Scoop {
@@ -563,6 +563,7 @@ function Install-Scoop {
     # Download scoop from GitHub
     Write-InstallInfo "Downloading ..."
     $downloader = Get-Downloader
+    [bool]$downloadZipsRequired = $True
 
     if (Test-CommandAvailable('git')) {
         $old_https = $env:HTTPS_PROXY
@@ -575,15 +576,25 @@ function Install-Scoop {
             }
             Write-Verbose "Cloning $SCOOP_PACKAGE_GIT_REPO to $SCOOP_APP_DIR"
             git clone -q $SCOOP_PACKAGE_GIT_REPO $SCOOP_APP_DIR
+            if (-Not $?) {
+                throw "Cloning failed. Falling back to downloading zip files."
+            }
             Write-Verbose "Cloning $SCOOP_MAIN_BUCKET_GIT_REPO to $SCOOP_MAIN_BUCKET_DIR"
             git clone -q $SCOOP_MAIN_BUCKET_GIT_REPO $SCOOP_MAIN_BUCKET_DIR
+            if (-Not $?) {
+                throw "Cloning failed. Falling back to downloading zip files."
+            }
+            $downloadZipsRequired = $False
         } catch {
-            Get-Error $_
+            Write-Warning "$($_.Exception.Message)"
+            $Global:LastExitCode = 0
         } finally {
             $env:HTTPS_PROXY = $old_https
             $env:HTTP_PROXY = $old_http
         }
-    } else {
+    }
+
+    if ($downloadZipsRequired) {
         # 1. download scoop
         $scoopZipfile = "$SCOOP_APP_DIR\scoop.zip"
         if (!(Test-Path $SCOOP_APP_DIR)) {
