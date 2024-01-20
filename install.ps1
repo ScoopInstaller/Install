@@ -50,6 +50,8 @@
     Use the credentials of the current user for the proxy server that is specified by the -Proxy parameter.
 .PARAMETER RunAsAdmin
     Force to run the installer as administrator.
+.PARAMETER Force
+    Ignore validation and warnings and force to run the installer.
 .LINK
     https://scoop.sh
 .LINK
@@ -63,7 +65,8 @@ param(
     [Uri] $Proxy,
     [System.Management.Automation.PSCredential] $ProxyCredential,
     [Switch] $ProxyUseDefaultCredentials,
-    [Switch] $RunAsAdmin
+    [Switch] $RunAsAdmin,
+    [Switch] $Force
 )
 
 # Disable StrictMode in this script
@@ -114,8 +117,13 @@ function Test-ValidateParameter {
         Deny-Install "ProxyUseDefaultCredentials is conflict with ProxyCredential. Don't use the -ProxyCredential and -ProxyUseDefaultCredentials together."
     }
 
+    # Check of installing scoop to a path containing spaces
+    if (!$Force -and $SCOOP_DIR.Contains(' ')) {
+        Deny-Install 'Installing Scoop to path '$SCOOP_DIR' containing spaces may cause unexpected behaviors, please choose another path.'
+    }
+
     # Ensure the directory to install scoop is empty
-    if ((Test-Path $SCOOP_DIR -PathType Container) -and [bool](Get-ChildItem $SCOOP_DIR -Force)) {
+    if (!$Force -and (Test-Path $SCOOP_DIR -PathType Container) -and [bool](Get-ChildItem $SCOOP_DIR -Force)) {
         Deny-Install "You are trying to install Scoop to a non-empty directory '$SCOOP_DIR', please choose another directory."
     }
 }
