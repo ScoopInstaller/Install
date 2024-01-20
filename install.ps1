@@ -119,7 +119,7 @@ function Test-ValidateParameter {
 
     # Check of installing scoop to a path containing spaces
     if (!$Force -and $SCOOP_DIR.Contains(' ')) {
-        Deny-Install 'Installing Scoop to path '$SCOOP_DIR' containing spaces may cause unexpected behaviors, please choose another path.'
+        Deny-Install "Installing Scoop to path '$SCOOP_DIR' containing spaces may cause unexpected behaviors, please choose another path."
     }
 
     # Ensure the directory to install scoop is empty
