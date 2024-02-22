@@ -40,3 +40,74 @@ Describe 'Test-CommandAvailable' -Tag 'CommandLine' {
         }
     }
 }
+
+Describe 'Get-Scoop-Source' -Tag 'Scoop' {
+    Context 'No source parameters provided' {
+        It 'Returns default source URLs' {
+            $expectedSource = @{
+                AppRepoZip        = "https://github.com/ScoopInstaller/Scoop/archive/master.zip"
+                AppRepoGit        = "https://github.com/ScoopInstaller/Scoop.git"
+                MainBucketRepoZip = "https://github.com/ScoopInstaller/Main/archive/master.zip"
+                MainBucketRepoGit = "https://github.com/ScoopInstaller/Main.git"
+            }
+            $actualSource = Get-Scoop-Source
+            $actualSourceJson = $actualSource | ConvertTo-Json
+            $expectedSourceJson = $expectedSource | ConvertTo-Json
+            $actualSourceJson | Should -Be $expectedSourceJson
+        }
+    }
+
+    Context 'Selected source parameters provided' {
+        It 'Provide all source parameters as arguments' {
+            $providedSource = @{
+                AppRepoZip        = "https://example.com/apprepo.zip"
+                AppRepoGit        = "https://example.com/apprepo.git"
+                MainBucketRepoZip = "https://example.com/mainbucket.zip"
+                MainBucketRepoGit = "https://example.com/mainbucket.git"
+            }
+            $actualSource = Get-Scoop-Source -ScoopAppRepoZip $providedSource.AppRepoZip `
+                -ScoopAppRepoGit $providedSource.AppRepoGit `
+                -ScoopMainBucketRepoZip $providedSource.MainBucketRepoZip `
+                -ScoopMainBucketRepoGit $providedSource.MainBucketRepoGit
+            $actualSourceJson = $actualSource | ConvertTo-Json
+            $expectedSourceJson = $providedSource | ConvertTo-Json
+            $actualSourceJson | Should -Be $expectedSourceJson
+        }
+
+        It 'Provide app repo zip url as argument' {
+            $actualSource = Get-Scoop-Source -ScoopAppRepoZip "https://example.com/apprepo.zip"
+            $actualSourceJson = $actualSource | ConvertTo-Json
+            $expectedSourceJson = @{
+                AppRepoZip        = "https://example.com/apprepo.zip"
+                AppRepoGit        = $null
+                MainBucketRepoZip = $null
+                MainBucketRepoGit = $null
+            } | ConvertTo-Json
+            $actualSourceJson | Should -Be $expectedSourceJson
+        }
+
+        It 'Provide app repo git url as argument' {
+            $actualSource = Get-Scoop-Source -ScoopAppRepoGit "https://example.com/apprepo.git"
+            $actualSourceJson = $actualSource | ConvertTo-Json
+            $expectedSourceJson = @{
+                AppRepoZip        = $null
+                AppRepoGit        = "https://example.com/apprepo.git"
+                MainBucketRepoZip = $null
+                MainBucketRepoGit = $null
+            } | ConvertTo-Json
+            $actualSourceJson | Should -Be $expectedSourceJson
+        }
+
+        It 'Provide main bucket repo zip url as argument' {
+            $actualSource = Get-Scoop-Source -ScoopMainBucketRepoZip "https://example.com/mainbucket.zip"
+            $actualSourceJson = $actualSource | ConvertTo-Json
+            $expectedSourceJson = @{
+                AppRepoZip        = "https://github.com/ScoopInstaller/Scoop/archive/master.zip"
+                AppRepoGit        = "https://github.com/ScoopInstaller/Scoop.git"
+                MainBucketRepoZip = "https://example.com/mainbucket.zip"
+                MainBucketRepoGit = "https://github.com/ScoopInstaller/Main.git"
+            } | ConvertTo-Json
+            $actualSourceJson | Should -Be $expectedSourceJson
+        }
+    }
+}

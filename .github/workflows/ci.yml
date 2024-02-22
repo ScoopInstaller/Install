@@ -7,7 +7,7 @@ on:
 
 jobs:
   test_powershell:
-    name: WindowsPowerShell
+    name: Test (WindowsPowerShell)
     runs-on: windows-latest
     steps:
       - name: Checkout
@@ -25,13 +25,14 @@ jobs:
       - name: Test Scoop Install command
         shell: powershell
         run: |
+          $VerbosePreference = "Continue"
           ./install.ps1 -RunAsAdmin
           echo "$Env:USERPROFILE\scoop\shims" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
       - name: Test scoop command availability
         shell: powershell
         run: scoop help
   test_pwsh_cloning:
-    name: PowerShell (with cloning)
+    name: Test (PowerShell, with cloning)
     runs-on: windows-latest
     steps:
       - name: Checkout
@@ -49,13 +50,14 @@ jobs:
       - name: Test Scoop Install command
         shell: pwsh
         run: |
+          $VerbosePreference = "Continue"
           ./install.ps1 -RunAsAdmin
           echo "~\scoop\shims" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
       - name: Test scoop command availability
         shell: pwsh
         run: scoop help
-  test_pwsh_download:
-    name: PowerShell (with downloading)
+  install_pwsh_download:
+    name: Installation (using download due to failing git clone)
     runs-on: windows-latest
     steps:
       - name: Checkout
@@ -66,7 +68,25 @@ jobs:
         shell: pwsh
         run: |
           git config --global protocol.https.allow never
+          $VerbosePreference = "Continue"
           ./install.ps1 -RunAsAdmin
+          echo "~\scoop\shims" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+      - name: Test scoop command availability
+        shell: pwsh
+        run: scoop help
+  install_pwsh_args:
+    name: Installation (using download of given source)
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@main
+        with:
+          fetch-depth: 2
+      - name: Test Scoop Install command
+        shell: pwsh
+        run: |
+          $VerbosePreference = "Continue"
+          ./install.ps1 -ScoopAppRepoZip "https://github.com/ScoopInstaller/Scoop/archive/master.zip" -RunAsAdmin
           echo "~\scoop\shims" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
       - name: Test scoop command availability
         shell: pwsh
