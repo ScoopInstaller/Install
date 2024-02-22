@@ -1,6 +1,7 @@
 name: Scoop Installer CI Tests
 
 on:
+  push:
   pull_request:
   workflow_dispatch:
 
