@@ -138,7 +138,7 @@ function Test-Prerequisite {
     }
 
     # Detect if RunAsAdministrator, there is no need to run as administrator when installing Scoop
-    if (!$RunAsAdmin -and (Test-IsAdministrator) -and $env:CI -ne 'true' -and $env:GITHUB_ACTIONS -ne 'true') {
+    if (!$RunAsAdmin -and (Test-IsAdministrator)) {
         # Exception: Windows Sandbox, GitHub Actions CI
         $exception = ($env:USERNAME -eq 'WDAGUtilityAccount') -or ($env:GITHUB_ACTIONS -eq 'true' -and $env:CI -eq 'true')
         if (!$exception) {
