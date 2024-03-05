@@ -131,7 +131,7 @@ function Test-ValidateParameter {
 function Test-IsAdministrator {
     return ([Security.Principal.WindowsPrincipal]`
             [Security.Principal.WindowsIdentity]::GetCurrent()`
-    ).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator) -and $env:USERNAME -ne 'WDAGUtilityAccount'
+    ).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
 }
 
 function Test-Prerequisite {
@@ -150,9 +150,13 @@ function Test-Prerequisite {
         Deny-Install "Scoop requires 'C:\Windows\System32\Robocopy.exe' to work. Please make sure 'C:\Windows\System32' is in your PATH."
     }
 
-    # Detect if RunAsAdministrator, there is no need to run as administrator when installing Scoop.
+    # Detect if RunAsAdministrator, there is no need to run as administrator when installing Scoop
     if (!$RunAsAdmin -and (Test-IsAdministrator)) {
-        Deny-Install 'Running the installer as administrator is disabled by default, see https://github.com/ScoopInstaller/Install#for-admin for details.'
+        # Exception: Windows Sandbox, GitHub Actions CI
+        $exception = ($env:USERNAME -eq 'WDAGUtilityAccount') -or ($env:GITHUB_ACTIONS -eq 'true' -and $env:CI -eq 'true')
+        if (!$exception) {
+            Deny-Install "Running the installer as administrator is disabled by default, see https://github.com/ScoopInstaller/Install#for-admin for details."
+        }
     }
 
     # Show notification to change execution policy
