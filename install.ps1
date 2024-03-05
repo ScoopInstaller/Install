@@ -155,7 +155,7 @@ function Test-Prerequisite {
         # Exception: Windows Sandbox, GitHub Actions CI
         $exception = ($env:USERNAME -eq 'WDAGUtilityAccount') -or ($env:GITHUB_ACTIONS -eq 'true' -and $env:CI -eq 'true')
         if (!$exception) {
-            Deny-Install "Running the installer as administrator is disabled by default, see https://github.com/ScoopInstaller/Install#for-admin for details."
+            Deny-Install 'Running the installer as administrator is disabled by default, see https://github.com/ScoopInstaller/Install#for-admin for details.'
         }
     }
 
