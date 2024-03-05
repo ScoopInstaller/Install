@@ -121,7 +121,7 @@ function Test-PathFileSystem {
     }
 
     # Wrap the code in a job to avoid loading assemblies into the current session
-    $fs = Start-Job -ScriptBlock {
+    $FileSystem = Start-Job -ScriptBlock {
         $DebugPreference = $using:DebugPreference
 
         Add-Type -Namespace Win32 -Name NativeMethods -UsingNamespace 'System.Text' -MemberDefinition @'
