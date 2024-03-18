@@ -565,7 +565,7 @@ function Install-Scoop {
     Optimize-SecurityProtocol
 
     # Download scoop from GitHub
-    Write-InstallInfo 'Downloading ...'
+    Write-InstallInfo 'Downloading...'
     $downloader = Get-Downloader
     [bool]$downloadZipsRequired = $True
 
