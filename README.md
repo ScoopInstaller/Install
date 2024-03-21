@@ -15,7 +15,7 @@ Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
 ### Typical Installation
 
 Run this command from a **non-admin** PowerShell to install scoop with default configuration,
-scoop will be install to `C:\Users\<YOUR USERNAME>\scoop`.
+scoop will be installed to `%USERPROFILE%\scoop` i.e. `C:\Users\<YOUR USERNAME>\scoop`.
 
 ```powershell
 irm get.scoop.sh | iex
@@ -41,14 +41,14 @@ For example, you could install scoop to a custom directory, configure scoop to i
 global programs to a custom directory, and bypass system proxy during installation.
 
 ```powershell
-.\install.ps1 -ScoopDir 'D:\Applications\Scoop' -ScoopGlobalDir 'F:\GlobalScoopApps' -NoProxy
+.\install.ps1 -ScoopDir "D:\Applications\Scoop" -ScoopGlobalDir "F:\GlobalScoopApps" -NoProxy
 ```
 
 Or you can use the legacy method to configure custom directory by setting Environment Variables. (**Not Recommended**)
 
 ```powershell
-$env:SCOOP='D:\Applications\Scoop'
-$env:SCOOP_GLOBAL='F:\GlobalScoopApps'
+$env:SCOOP="D:\Applications\Scoop"
+$env:SCOOP_GLOBAL="F:\GlobalScoopApps"
 [Environment]::SetEnvironmentVariable('SCOOP_GLOBAL', $env:SCOOP_GLOBAL, 'Machine')
 irm get.scoop.sh | iex
 ```
