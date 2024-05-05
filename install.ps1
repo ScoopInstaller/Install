@@ -31,9 +31,9 @@
     Scoop installer.
 .DESCRIPTION
     The installer of Scoop. For details please check the website and wiki.
-.PARAMETER ScoopDir
+.PARAMETER ScoopLocalDir
     Specifies Scoop root path.
-    If not specified, Scoop will be installed to '$env:USERPROFILE\scoop'.
+    If not specified, Scoop will be installed to '$env:LocalAppData\scoop'.
 .PARAMETER ScoopGlobalDir
     Specifies directory to store global apps.
     If not specified, global apps will be installed to '$env:ProgramData\scoop'.
@@ -56,7 +56,7 @@
     https://github.com/ScoopInstaller/Scoop/wiki
 #>
 param(
-    [String] $ScoopDir,
+    [String] $ScoopLocalDir,
     [String] $ScoopGlobalDir,
     [String] $ScoopCacheDir,
     [Switch] $NoProxy,
@@ -435,7 +435,7 @@ function Write-Env {
 
 function Add-ShimsDirToPath {
     # Get $env:PATH of current user
-    $userEnvPath = Get-Env 'PATH'
+    $userEnvPath = Get-Env 'PATH' -global:$RunAsAdmin
 
     if ($userEnvPath -notmatch [Regex]::Escape($SCOOP_SHIMS_DIR)) {
         $h = (Get-PSProvider 'FileSystem').Home
@@ -451,7 +451,7 @@ function Add-ShimsDirToPath {
         }
 
         # For future sessions
-        Write-Env 'PATH' "$SCOOP_SHIMS_DIR;$userEnvPath"
+        Write-Env 'PATH' "$SCOOP_SHIMS_DIR;$userEnvPath" -global:$RunAsAdmin
         # For current session
         $env:PATH = "$SCOOP_SHIMS_DIR;$env:PATH"
     }
@@ -507,11 +507,11 @@ function Add-Config {
 }
 
 function Add-DefaultConfig {
-    # If user-level SCOOP env not defined, save to root_path
-    if (!(Get-Env 'SCOOP')) {
-        if ($SCOOP_DIR -ne "$env:USERPROFILE\scoop") {
-            Write-Verbose "Adding config root_path: $SCOOP_DIR"
-            Add-Config -Name 'root_path' -Value $SCOOP_DIR | Out-Null
+    # If user-level SCOOP_LOCAL env not defined, save to root_path
+    if (!(Get-Env 'SCOOP_LOCAL')) {
+        if ($SCOOP_LOCAL_DIR -ne "$env:LocalAppData\scoop") {
+            Write-Verbose "Adding config local_path: $SCOOP_LOCAL_DIR"
+            Add-Config -Name 'local_path' -Value $SCOOP_LOCAL_DIR | Out-Null
         }
     }
 
@@ -650,13 +650,13 @@ function Write-DebugInfo {
     Write-Verbose '-------- PSBoundParameters --------'
     $BoundArgs.GetEnumerator() | ForEach-Object { Write-Verbose $_ }
     Write-Verbose '-------- Environment Variables --------'
-    Write-Verbose "`$env:USERPROFILE: $env:USERPROFILE"
+    Write-Verbose "`$env:LocalAppData: $env:LocalAppData"
     Write-Verbose "`$env:ProgramData: $env:ProgramData"
     Write-Verbose "`$env:SCOOP: $env:SCOOP"
     Write-Verbose "`$env:SCOOP_CACHE: $SCOOP_CACHE"
     Write-Verbose "`$env:SCOOP_GLOBAL: $env:SCOOP_GLOBAL"
     Write-Verbose '-------- Selected Variables --------'
-    Write-Verbose "SCOOP_DIR: $SCOOP_DIR"
+    Write-Verbose "SCOOP_LOCAL_DIR: $SCOOP_LOCAL_DIR"
     Write-Verbose "SCOOP_CACHE_DIR: $SCOOP_CACHE_DIR"
     Write-Verbose "SCOOP_GLOBAL_DIR: $SCOOP_GLOBAL_DIR"
     Write-Verbose "SCOOP_CONFIG_HOME: $SCOOP_CONFIG_HOME"
@@ -665,10 +665,12 @@ function Write-DebugInfo {
 # Prepare variables
 $IS_EXECUTED_FROM_IEX = ($null -eq $MyInvocation.MyCommand.Path)
 
-# Scoop root directory
-$SCOOP_DIR = $ScoopDir, $env:SCOOP, "$env:USERPROFILE\scoop" | Where-Object { -not [String]::IsNullOrEmpty($_) } | Select-Object -First 1
+# Scoop local directory
+$SCOOP_LOCAL_DIR = $ScoopLocalDir, $env:SCOOP, "$env:LocalAppData\scoop" | Where-Object { -not [String]::IsNullOrEmpty($_) } | Select-Object -First 1
 # Scoop global apps directory
 $SCOOP_GLOBAL_DIR = $ScoopGlobalDir, $env:SCOOP_GLOBAL, "$env:ProgramData\scoop" | Where-Object { -not [String]::IsNullOrEmpty($_) } | Select-Object -First 1
+# Scoop root directory
+$SCOOP_DIR = $RunAsAdmin ? $SCOOP_GLOBAL_DIR : $SCOOP_LOCAL_DIR
 # Scoop cache directory
 $SCOOP_CACHE_DIR = $ScoopCacheDir, $env:SCOOP_CACHE, "$SCOOP_DIR\cache" | Where-Object { -not [String]::IsNullOrEmpty($_) } | Select-Object -First 1
 # Scoop shims directory
@@ -678,8 +680,7 @@ $SCOOP_APP_DIR = "$SCOOP_DIR\apps\scoop\current"
 # Scoop main bucket directory
 $SCOOP_MAIN_BUCKET_DIR = "$SCOOP_DIR\buckets\main"
 # Scoop config file location
-$SCOOP_CONFIG_HOME = $env:XDG_CONFIG_HOME, "$env:USERPROFILE\.config" | Select-Object -First 1
-$SCOOP_CONFIG_FILE = "$SCOOP_CONFIG_HOME\scoop\config.json"
+$SCOOP_CONFIG_FILE = "$SCOOP_DIR\config.json"
 
 # TODO: Use a specific version of Scoop and the main bucket
 $SCOOP_PACKAGE_REPO = 'https://github.com/ScoopInstaller/Scoop/archive/master.zip'
