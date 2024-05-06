@@ -31,8 +31,11 @@
     Scoop installer.
 .DESCRIPTION
     The installer of Scoop. For details please check the website and wiki.
-.PARAMETER ScoopLocalDir
+.PARAMETER ScoopDir
     Specifies Scoop root path.
+    If not specified, Scoop will be installed to '$env:LocalAppData\scoop' if ran as admin or '$env:ProgramData\scoop' else.
+.PARAMETER ScoopLocalDir
+    Specifies directory to store local apps.
     If not specified, Scoop will be installed to '$env:LocalAppData\scoop'.
 .PARAMETER ScoopGlobalDir
     Specifies directory to store global apps.
@@ -56,6 +59,7 @@
     https://github.com/ScoopInstaller/Scoop/wiki
 #>
 param(
+    [String] $ScoopDir,
     [String] $ScoopLocalDir,
     [String] $ScoopGlobalDir,
     [String] $ScoopCacheDir,
@@ -434,7 +438,7 @@ function Write-Env {
 }
 
 function Add-ShimsDirToPath {
-    # Get $env:PATH of current user
+    # Get $env:PATH of current user/machine
     $userEnvPath = Get-Env 'PATH' -global:$RunAsAdmin
 
     if ($userEnvPath -notmatch [Regex]::Escape($SCOOP_SHIMS_DIR)) {
@@ -654,12 +658,13 @@ function Write-DebugInfo {
     Write-Verbose "`$env:ProgramData: $env:ProgramData"
     Write-Verbose "`$env:SCOOP: $env:SCOOP"
     Write-Verbose "`$env:SCOOP_CACHE: $SCOOP_CACHE"
+    Write-Verbose "`$env:SCOOP_LOCAL: $env:SCOOP_LOCAL"
     Write-Verbose "`$env:SCOOP_GLOBAL: $env:SCOOP_GLOBAL"
     Write-Verbose '-------- Selected Variables --------'
+    Write-Verbose "SCOOP_DIR: $SCOOP_DIR"
     Write-Verbose "SCOOP_LOCAL_DIR: $SCOOP_LOCAL_DIR"
     Write-Verbose "SCOOP_CACHE_DIR: $SCOOP_CACHE_DIR"
     Write-Verbose "SCOOP_GLOBAL_DIR: $SCOOP_GLOBAL_DIR"
-    Write-Verbose "SCOOP_CONFIG_HOME: $SCOOP_CONFIG_HOME"
 }
 
 # Prepare variables
@@ -670,7 +675,7 @@ $SCOOP_LOCAL_DIR = $ScoopLocalDir, $env:SCOOP, "$env:LocalAppData\scoop" | Where
 # Scoop global apps directory
 $SCOOP_GLOBAL_DIR = $ScoopGlobalDir, $env:SCOOP_GLOBAL, "$env:ProgramData\scoop" | Where-Object { -not [String]::IsNullOrEmpty($_) } | Select-Object -First 1
 # Scoop root directory
-$SCOOP_DIR = $RunAsAdmin ? $SCOOP_GLOBAL_DIR : $SCOOP_LOCAL_DIR
+$SCOOP_DIR = $ScoopDir, $env:SCOOP, ($RunAsAdmin ? $SCOOP_GLOBAL_DIR : $SCOOP_LOCAL_DIR) | Where-Object { -not [String]::IsNullOrEmpty($_) } | Select-Object -First 1
 # Scoop cache directory
 $SCOOP_CACHE_DIR = $ScoopCacheDir, $env:SCOOP_CACHE, "$SCOOP_DIR\cache" | Where-Object { -not [String]::IsNullOrEmpty($_) } | Select-Object -First 1
 # Scoop shims directory
