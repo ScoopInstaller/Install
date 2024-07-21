@@ -40,6 +40,12 @@
 .PARAMETER ScoopCacheDir
     Specifies cache directory.
     If not specified, caches will be downloaded to '$ScoopDir\cache'.
+.PARAMETER ScoopPersistDir
+    Specifies persist directory.
+    If not specified,  persistent file will be saved to '$ScoopDir\persist'.
+.PARAMETER ScoopPersistGlobalDir
+    Specifies persist directory for global apps.
+    If not specified, global persistent file will be saved to '$ScoopGlobalDir\persist'.
 .PARAMETER NoProxy
     Bypass system proxy during the installation.
 .PARAMETER Proxy
@@ -59,6 +65,8 @@ param(
     [String] $ScoopDir,
     [String] $ScoopGlobalDir,
     [String] $ScoopCacheDir,
+    [String] $ScoopPersistDir,
+    [String] $ScoopPersistGlobalDir,
     [Switch] $NoProxy,
     [Uri] $Proxy,
     [System.Management.Automation.PSCredential] $ProxyCredential,
@@ -543,6 +551,28 @@ function Add-DefaultConfig {
         }
     }
 
+    # Use user-level SCOOP_PERSIST, or save to persist_path
+    if (!(Get-Env 'SCOOP_PERSIST')) {
+        if ($SCOOP_PERSIST_DIR -ne "$SCOOP_DIR\persist") {
+            Write-Verbose "Adding config persist_path: $SCOOP_PERSIST_DIR"
+            Add-Config -Name 'persist_path' -Value $SCOOP_PERSIST_DIR | Out-Null
+        }
+    }
+
+    # Use system SCOOP_PERSIST_GLOBAL, or set system SCOOP_PERSIST_GLOBAL
+    # with $env:SCOOP_PERSIST_GLOBAL if RunAsAdmin, otherwise save to global_persist_path
+    if (!(Get-Env 'SCOOP_PERSIST_GLOBAL' -global)) {
+        if ((Test-IsAdministrator) -and $env:SCOOP_PERSIST_GLOBAL) {
+            Write-Verbose "Setting System Environment Variable SCOOP_PERSIST_GLOBAL: $env:SCOOP_PERSIST_GLOBAL"
+            [Environment]::SetEnvironmentVariable('SCOOP_PERSIST_GLOBAL', $env:SCOOP_PERSIST_GLOBAL, 'Machine')
+        } else {
+            if ($SCOOP_PERSIST_GLOBAL_DIR -ne "$SCOOP_GLOBAL_DIR\persist") {
+                Write-Verbose "Adding config global_persist_path: $SCOOP_PERSIST_GLOBAL_DIR"
+                Add-Config -Name 'global_persist_path' -Value $SCOOP_PERSIST_GLOBAL_DIR | Out-Null
+            }
+        }
+    }
+
     # save current datatime to last_update
     Add-Config -Name 'last_update' -Value ([System.DateTime]::Now.ToString('o')) | Out-Null
 }
@@ -654,10 +684,14 @@ function Write-DebugInfo {
     Write-Verbose "`$env:ProgramData: $env:ProgramData"
     Write-Verbose "`$env:SCOOP: $env:SCOOP"
     Write-Verbose "`$env:SCOOP_CACHE: $SCOOP_CACHE"
+    Write-Verbose "`$env:SCOOP_PERSIST: $SCOOP_PERSIST"
+    Write-Verbose "`$env:SCOOP_PERSIST_GLOBAL: $SCOOP_CACHE"
     Write-Verbose "`$env:SCOOP_GLOBAL: $env:SCOOP_GLOBAL"
     Write-Verbose '-------- Selected Variables --------'
     Write-Verbose "SCOOP_DIR: $SCOOP_DIR"
     Write-Verbose "SCOOP_CACHE_DIR: $SCOOP_CACHE_DIR"
+    Write-Verbose "SCOOP_PERSIST_DIR: $SCOOP_PERSIST_DIR"
+    Write-Verbose "SCOOP_PERSIST_GLOBAL_DIR: $SCOOP_PERSIST_GLOBAL_DIR"
     Write-Verbose "SCOOP_GLOBAL_DIR: $SCOOP_GLOBAL_DIR"
     Write-Verbose "SCOOP_CONFIG_HOME: $SCOOP_CONFIG_HOME"
 }
@@ -671,6 +705,9 @@ $SCOOP_DIR = $ScoopDir, $env:SCOOP, "$env:USERPROFILE\scoop" | Where-Object { -n
 $SCOOP_GLOBAL_DIR = $ScoopGlobalDir, $env:SCOOP_GLOBAL, "$env:ProgramData\scoop" | Where-Object { -not [String]::IsNullOrEmpty($_) } | Select-Object -First 1
 # Scoop cache directory
 $SCOOP_CACHE_DIR = $ScoopCacheDir, $env:SCOOP_CACHE, "$SCOOP_DIR\cache" | Where-Object { -not [String]::IsNullOrEmpty($_) } | Select-Object -First 1
+# Scoop persist directories
+$SCOOP_PERSIST_DIR = $ScoopPersistDir, $env:SCOOP_PERSIST, "$SCOOP_DIR\persist" | Where-Object { -not [String]::IsNullOrEmpty($_) } | Select-Object -First 1
+$SCOOP_PERSIST_GLOBAL_DIR = $ScoopPersistGlobalDir, $env:SCOOP_PERSIST_GLOBAL, "$SCOOP_GLOBAL_DIR\persist" | Where-Object { -not [String]::IsNullOrEmpty($_) } | Select-Object -First 1
 # Scoop shims directory
 $SCOOP_SHIMS_DIR = "$SCOOP_DIR\shims"
 # Scoop itself directory
