@@ -75,10 +75,14 @@ For a full offline installation you can pre-download the following files:
 And then run:
 
 ```shell
-.\install.ps1 -OfflineSourceFolder 'C:\folder\with\zip\files'
+# From a local folder
+.\install.ps1 -OfflineSourceFolder 'C:\Local\Path\To\Zip\Files'
+
+# From a network path
+.\install.ps1 -OfflineSourceFolder '\\UNC\Path\To\Zip\Files'
 ```
 
-The installer will copy/extract the provided files as needed. They are not deleted afterwards.
+The installer will copy/extract the provided ZIP files as needed. They are not deleted afterwards.
 
 ### Silent Installation
 
