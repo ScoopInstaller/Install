@@ -50,6 +50,8 @@
     Use the credentials of the current user for the proxy server that is specified by the -Proxy parameter.
 .PARAMETER RunAsAdmin
     Force to run the installer as administrator.
+.PARAMETER OfflineSourceFolder
+    Folder containing the 2 installer ZIP files for offline installation.
 .LINK
     https://scoop.sh
 .LINK
@@ -63,7 +65,8 @@ param(
     [Uri] $Proxy,
     [System.Management.Automation.PSCredential] $ProxyCredential,
     [Switch] $ProxyUseDefaultCredentials,
-    [Switch] $RunAsAdmin
+    [Switch] $RunAsAdmin,
+    [String] $OfflineSourceFolder
 )
 
 # Disable StrictMode in this script
@@ -582,7 +585,7 @@ function Install-Scoop {
     $downloader = Get-Downloader
     [bool]$downloadZipsRequired = $True
 
-    if (Test-CommandAvailable('git')) {
+    if ((Test-CommandAvailable('git')) -and ($OfflineSourceFolder -eq "") ) {
         $old_https = $env:HTTPS_PROXY
         $old_http = $env:HTTP_PROXY
         try {
@@ -617,15 +620,26 @@ function Install-Scoop {
         if (!(Test-Path $SCOOP_APP_DIR)) {
             New-Item -Type Directory $SCOOP_APP_DIR | Out-Null
         }
-        Write-Verbose "Downloading $SCOOP_PACKAGE_REPO to $scoopZipfile"
-        $downloader.downloadFile($SCOOP_PACKAGE_REPO, $scoopZipfile)
+        if ($OfflineSourceFolder -eq "") {
+            Write-Verbose "Downloading $SCOOP_PACKAGE_REPO to $scoopZipfile"
+            $downloader.downloadFile($SCOOP_PACKAGE_REPO, $scoopZipfile)
+        } else {
+            Write-Verbose "Copying $OfflineSourceFolder\$SCOOP_PACKAGE_OFFLINE_FILENAME to $scoopZipfile"
+            Copy-Item "$OfflineSourceFolder\$SCOOP_PACKAGE_OFFLINE_FILENAME" $scoopZipfile
+        }
+
         # 2. download scoop main bucket
         $scoopMainZipfile = "$SCOOP_MAIN_BUCKET_DIR\scoop-main.zip"
         if (!(Test-Path $SCOOP_MAIN_BUCKET_DIR)) {
             New-Item -Type Directory $SCOOP_MAIN_BUCKET_DIR | Out-Null
         }
-        Write-Verbose "Downloading $SCOOP_MAIN_BUCKET_REPO to $scoopMainZipfile"
-        $downloader.downloadFile($SCOOP_MAIN_BUCKET_REPO, $scoopMainZipfile)
+        if ($OfflineSourceFolder -eq "") {
+            Write-Verbose "Downloading $SCOOP_MAIN_BUCKET_REPO to $scoopMainZipfile"
+            $downloader.downloadFile($SCOOP_MAIN_BUCKET_REPO, $scoopMainZipfile)
+        } else {
+            Write-Verbose "Copying $OfflineSourceFolder\$SCOOP_MAIN_BUCKET_OFFLINE_FILENAME to $scoopMainZipfile"
+            Copy-Item "$OfflineSourceFolder\$SCOOP_MAIN_BUCKET_OFFLINE_FILENAME" $scoopMainZipfile
+        }
 
         # Extract files from downloaded zip
         Write-InstallInfo 'Extracting...'
@@ -703,6 +717,10 @@ $SCOOP_MAIN_BUCKET_REPO = 'https://github.com/ScoopInstaller/Main/archive/master
 
 $SCOOP_PACKAGE_GIT_REPO = 'https://github.com/ScoopInstaller/Scoop.git'
 $SCOOP_MAIN_BUCKET_GIT_REPO = 'https://github.com/ScoopInstaller/Main.git'
+
+# Expected filenames for the Git repo contents when performing an offline install
+$SCOOP_PACKAGE_OFFLINE_FILENAME = 'ScoopInstaller-Scoop.zip'
+$SCOOP_MAIN_BUCKET_OFFLINE_FILENAME = 'ScoopInstaller-Main.zip'
 
 # Quit if anything goes wrong
 $oldErrorActionPreference = $ErrorActionPreference

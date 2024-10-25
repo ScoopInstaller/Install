@@ -67,6 +67,26 @@ irm get.scoop.sh -outfile 'install.ps1'
 iex "& {$(irm get.scoop.sh)} -RunAsAdmin"
 ```
 
+#### Offline installation
+
+By default, the installer will download content from the official Scoop Git repos.
+For a full offline installation you can pre-download the following files:
+
+- https://github.com/ScoopInstaller/Scoop/archive/master.zip as `ScoopInstaller-Scoop.zip`
+- https://github.com/ScoopInstaller/Main/archive/master.zip as `ScoopInstaller-Main.zip`
+
+And then run:
+
+```shell
+# From a local folder
+.\install.ps1 -OfflineSourceFolder 'C:\Local\Path\To\Zip\Files'
+
+# From a network path
+.\install.ps1 -OfflineSourceFolder '\\UNC\Path\To\Zip\Files'
+```
+
+The installer will copy/extract the provided ZIP files as needed. They are not deleted afterwards.
+
 ### Silent Installation
 
 You can redirect all outputs to Out-Null or a log file to silence the installer. And you can use `$LASTEXITCODE` to check the installation result, it will be `0` when the installation success.
