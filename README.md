@@ -1,16 +1,19 @@
 # Scoop (un)installer
 
+[![ci-badge](https://github.com/ScoopInstaller/Install/actions/workflows/ci.yml/badge.svg)](https://github.com/ScoopInstaller/Install/actions/workflows/ci.yml)
+
 ## Installation
 
 ### Prerequisites
 
-- [PowerShell](https://aka.ms/powershell) latest version or [Windows PowerShell 5.1](https://aka.ms/wmf5download)
+[PowerShell](https://aka.ms/powershell) latest version or [Windows PowerShell 5.1](https://aka.ms/wmf5download)
 
-PowerShell execution policy is required to be one of: `Unrestricted`, `RemoteSigned` or `ByPass` to execute the installer. For example:
+- The PowerShell [Language Mode] is required to be `FullLanguage` to run the installer and Scoop.
+- The PowerShell [Execution Policy] is required to be one of `RemoteSigned`, `Unrestricted` or `ByPass` to run the installer. For example, it can be set to `RemoteSigned` via:
 
-```powershell
-Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
-```
+  ```powershell
+  Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
+  ```
 
 ### Typical Installation
 
@@ -76,3 +79,10 @@ You can redirect all outputs to Out-Null or a log file to silence the installer.
 # Get result
 $LASTEXITCODE
 ```
+
+## License
+
+The project is released under the [Unlicense License](LICENSE) and into the public domain.
+
+[Language Mode]: https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_language_modes
+[Execution Policy]: https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_execution_policies
