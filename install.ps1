@@ -105,6 +105,19 @@ function Deny-Install {
     }
 }
 
+function Test-LanguageMode {
+    if ($ExecutionContext.SessionState.LanguageMode -ne 'FullLanguage') {
+        Write-Output 'Scoop requires PowerShell FullLanguage mode to run, current PowerShell environment is restricted.'
+        Write-Output 'Abort.'
+
+        if ($IS_EXECUTED_FROM_IEX) {
+            break
+        } else {
+            exit $errorCode
+        }
+    }
+}
+
 function Test-ValidateParameter {
     if ($null -eq $Proxy -and ($null -ne $ProxyCredential -or $ProxyUseDefaultCredentials)) {
         Deny-Install 'Provide a valid proxy URI for the -Proxy parameter when using the -ProxyCredential or -ProxyUseDefaultCredentials.'
@@ -664,6 +677,9 @@ function Write-DebugInfo {
 
 # Prepare variables
 $IS_EXECUTED_FROM_IEX = ($null -eq $MyInvocation.MyCommand.Path)
+
+# Abort when the language mode is restricted
+Test-LanguageMode
 
 # Scoop root directory
 $SCOOP_DIR = $ScoopDir, $env:SCOOP, "$env:USERPROFILE\scoop" | Where-Object { -not [String]::IsNullOrEmpty($_) } | Select-Object -First 1
