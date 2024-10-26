@@ -40,6 +40,20 @@
 .PARAMETER ScoopCacheDir
     Specifies cache directory.
     If not specified, caches will be downloaded to '$ScoopDir\cache'.
+.PARAMETER ScoopAppRepoZip
+    Specifies the source of Scoop app as zip file.
+    If not specified, the default app repository zip will be used.
+.PARAMETER ScoopAppRepoGit
+    Specifies the source of Scoop app as git repository.
+    If not specified, the default app git repository will be used.
+.PARAMETER ScoopMainBucketRepoZip
+    Specifies the source of Scoop main bucket as zip file.
+    If not specified, but a Scoop app source is specified, no main bucket will be installed.
+    Otherwise, the default main bucket repository zip will be used.
+.PARAMETER ScoopMainBucketRepoGit
+    Specifies the source of Scoop main bucket as git repository.
+    If not specified, but a Scoop app source is specified, no main bucket will be installed.
+    Otherwise, the default main bucket git repository will be used.
 .PARAMETER NoProxy
     Bypass system proxy during the installation.
 .PARAMETER Proxy
@@ -59,6 +73,10 @@ param(
     [String] $ScoopDir,
     [String] $ScoopGlobalDir,
     [String] $ScoopCacheDir,
+    [String] $ScoopAppRepoZip,
+    [String] $ScoopAppRepoGit,
+    [String] $ScoopMainBucketRepoZip,
+    [String] $ScoopMainBucketRepoGit,
     [Switch] $NoProxy,
     [Uri] $Proxy,
     [System.Management.Automation.PSCredential] $ProxyCredential,
@@ -568,6 +586,35 @@ function Test-CommandAvailable {
     return [Boolean](Get-Command $Command -ErrorAction SilentlyContinue)
 }
 
+function Get-Scoop-Source {
+    param (
+        [Parameter(Mandatory = $False, Position = 0)]
+        [String] $ScoopAppRepoZip = "",
+        [Parameter(Mandatory = $False, Position = 1)]
+        [String] $ScoopAppRepoGit = "",
+        [Parameter(Mandatory = $False, Position = 2)]
+        [String] $ScoopMainBucketRepoZip = "",
+        [Parameter(Mandatory = $False, Position = 3)]
+        [String] $ScoopMainBucketRepoGit = ""
+    )
+    $ScoopSource = @{}
+    if ($ScoopAppRepoZip -or $Env:SCOOP_APP_REPO_ZIP -or
+        $ScoopAppRepoGit -or $Env:SCOOP_APP_REPO_GIT) {
+        # In case of any app repo source is provided, we expect all repo source parameters are provided.
+        # Otherwise we skip the main bucket source.
+        $ScoopSource.AppRepoZip = $ScoopAppRepoZip, $Env:SCOOP_APP_REPO_ZIP | Where-Object { -not [String]::IsNullOrEmpty($_) } | Select-Object -First 1
+        $ScoopSource.AppRepoGit = $ScoopAppRepoGit, $Env:SCOOP_APP_REPO_GIT | Where-Object { -not [String]::IsNullOrEmpty($_) } | Select-Object -First 1
+        $ScoopSource.MainBucketRepoZip = $ScoopMainBucketRepoZip, $Env:SCOOP_MAIN_BUCKET_REPO_ZIP | Where-Object { -not [String]::IsNullOrEmpty($_) } | Select-Object -First 1
+        $ScoopSource.MainBucketRepoGit = $ScoopMainBucketRepoGit, $Env:SCOOP_MAIN_BUCKET_REPO_GIT | Where-Object { -not [String]::IsNullOrEmpty($_) } | Select-Object -First 1
+    } else {
+        $ScoopSource.AppRepoZip = "https://github.com/ScoopInstaller/Scoop/archive/master.zip"
+        $ScoopSource.AppRepoGit = "https://github.com/ScoopInstaller/Scoop.git"
+        $ScoopSource.MainBucketRepoZip = $ScoopMainBucketRepoZip, $Env:SCOOP_MAIN_BUCKET_REPO_ZIP, "https://github.com/ScoopInstaller/Main/archive/master.zip" | Where-Object { -not [String]::IsNullOrEmpty($_) } | Select-Object -First 1
+        $ScoopSource.MainBucketRepoGit = $ScoopMainBucketRepoGit, $Env:SCOOP_MAIN_BUCKET_REPO_GIT, "https://github.com/ScoopInstaller/Main.git" | Where-Object { -not [String]::IsNullOrEmpty($_) } | Select-Object -First 1
+    }
+    return $ScoopSource
+}
+
 function Install-Scoop {
     Write-InstallInfo 'Initializing...'
     # Validate install parameters
@@ -578,11 +625,18 @@ function Install-Scoop {
     Optimize-SecurityProtocol
 
     # Download scoop from GitHub
-    Write-InstallInfo 'Downloading...'
+    Write-InstallInfo 'Installing ...'
     $downloader = Get-Downloader
-    [bool]$downloadZipsRequired = $True
+    [bool]$downloadAppZipRequired = $True
+    [bool]$downloadMainBucketZipRequired = $True
 
-    if (Test-CommandAvailable('git')) {
+    # Create buckets dir as it might not be created in case no
+    # initial bucket is provided
+    if (!(Test-Path $SCOOP_BUCKETS_DIR)) {
+        New-Item -Type Directory $SCOOP_BUCKETS_DIR | Out-Null
+    }
+
+    if (($ScoopSources.AppRepoGit -or $ScoopSources.MainBucketRepoGit) -and (Test-CommandAvailable('git'))) {
         $old_https = $env:HTTPS_PROXY
         $old_http = $env:HTTP_PROXY
         try {
@@ -591,17 +645,22 @@ function Install-Scoop {
                 $Env:HTTP_PROXY = $downloader.Proxy.Address
                 $Env:HTTPS_PROXY = $downloader.Proxy.Address
             }
-            Write-Verbose "Cloning $SCOOP_PACKAGE_GIT_REPO to $SCOOP_APP_DIR"
-            git clone -q $SCOOP_PACKAGE_GIT_REPO $SCOOP_APP_DIR
-            if (-Not $?) {
-                throw 'Cloning failed. Falling back to downloading zip files.'
+            if ($ScoopSources.AppRepoGit) {
+                Write-Verbose ("Cloning {0} to $SCOOP_APP_DIR" -f $ScoopSources.AppRepoGit)
+                git clone -q $ScoopSources.AppRepoGit $SCOOP_APP_DIR
+                if (-Not $?) {
+                    throw 'Cloning failed. Falling back to downloading zip files.'
+                }
+                $downloadAppZipRequired = $False
             }
-            Write-Verbose "Cloning $SCOOP_MAIN_BUCKET_GIT_REPO to $SCOOP_MAIN_BUCKET_DIR"
-            git clone -q $SCOOP_MAIN_BUCKET_GIT_REPO $SCOOP_MAIN_BUCKET_DIR
-            if (-Not $?) {
-                throw 'Cloning failed. Falling back to downloading zip files.'
+            if ($ScoopSources.MainBucketRepoGit) {
+                Write-Verbose ("Cloning {0} to $SCOOP_MAIN_BUCKET_DIR" -f $ScoopSources.MainBucketRepoGit)
+                git clone -q $ScoopSources.MainBucketRepoGit $SCOOP_MAIN_BUCKET_DIR
+                if (-Not $?) {
+                    throw 'Cloning failed. Falling back to downloading zip files.'
+                }
+                $downloadMainBucketZipRequired = $False
             }
-            $downloadZipsRequired = $False
         } catch {
             Write-Warning "$($_.Exception.Message)"
             $Global:LastExitCode = 0
@@ -611,41 +670,42 @@ function Install-Scoop {
         }
     }
 
-    if ($downloadZipsRequired) {
-        # 1. download scoop
+    if ($ScoopSources.AppRepoZip -and $downloadAppZipRequired) {
+        # 1. download scoop app
         $scoopZipfile = "$SCOOP_APP_DIR\scoop.zip"
         if (!(Test-Path $SCOOP_APP_DIR)) {
             New-Item -Type Directory $SCOOP_APP_DIR | Out-Null
         }
-        Write-Verbose "Downloading $SCOOP_PACKAGE_REPO to $scoopZipfile"
-        $downloader.downloadFile($SCOOP_PACKAGE_REPO, $scoopZipfile)
+        Write-Verbose ("Downloading {0} to $scoopZipfile" -f $ScoopSources.AppRepoZip)
+        $downloader.downloadFile($ScoopSources.AppRepoZip, $scoopZipfile)
+        # extract
+        $scoopUnzipTempDir = "$SCOOP_APP_DIR\_tmp"
+        Write-Verbose "Extracting $scoopZipfile to $scoopUnzipTempDir"
+        Expand-ZipArchive $scoopZipfile $scoopUnzipTempDir
+        Copy-Item "$scoopUnzipTempDir\scoop-*\*" $SCOOP_APP_DIR -Recurse -Force
+        # cleanup
+        Remove-Item $scoopUnzipTempDir -Recurse -Force
+        Remove-Item $scoopZipfile
+    }
+
+    if ($ScoopSources.MainBucketRepoZip -and $downloadMainBucketZipRequired) {
         # 2. download scoop main bucket
         $scoopMainZipfile = "$SCOOP_MAIN_BUCKET_DIR\scoop-main.zip"
         if (!(Test-Path $SCOOP_MAIN_BUCKET_DIR)) {
             New-Item -Type Directory $SCOOP_MAIN_BUCKET_DIR | Out-Null
         }
-        Write-Verbose "Downloading $SCOOP_MAIN_BUCKET_REPO to $scoopMainZipfile"
-        $downloader.downloadFile($SCOOP_MAIN_BUCKET_REPO, $scoopMainZipfile)
-
-        # Extract files from downloaded zip
-        Write-InstallInfo 'Extracting...'
-        # 1. extract scoop
-        $scoopUnzipTempDir = "$SCOOP_APP_DIR\_tmp"
-        Write-Verbose "Extracting $scoopZipfile to $scoopUnzipTempDir"
-        Expand-ZipArchive $scoopZipfile $scoopUnzipTempDir
-        Copy-Item "$scoopUnzipTempDir\scoop-*\*" $SCOOP_APP_DIR -Recurse -Force
-        # 2. extract scoop main bucket
+        Write-Verbose ("Downloading {0} to $scoopMainZipfile" -f $ScoopSources.MainBucketRepoZip)
+        $downloader.downloadFile($ScoopSources.MainBucketRepoZip, $scoopMainZipfile)
+        # extract
         $scoopMainUnzipTempDir = "$SCOOP_MAIN_BUCKET_DIR\_tmp"
         Write-Verbose "Extracting $scoopMainZipfile to $scoopMainUnzipTempDir"
         Expand-ZipArchive $scoopMainZipfile $scoopMainUnzipTempDir
         Copy-Item "$scoopMainUnzipTempDir\Main-*\*" $SCOOP_MAIN_BUCKET_DIR -Recurse -Force
-
-        # Cleanup
-        Remove-Item $scoopUnzipTempDir -Recurse -Force
-        Remove-Item $scoopZipfile
+        # cleanup
         Remove-Item $scoopMainUnzipTempDir -Recurse -Force
         Remove-Item $scoopMainZipfile
     }
+
     # Create the scoop shim
     Import-ScoopShim
     # Finially ensure scoop shims is in the PATH
@@ -689,20 +749,17 @@ $SCOOP_GLOBAL_DIR = $ScoopGlobalDir, $env:SCOOP_GLOBAL, "$env:ProgramData\scoop"
 $SCOOP_CACHE_DIR = $ScoopCacheDir, $env:SCOOP_CACHE, "$SCOOP_DIR\cache" | Where-Object { -not [String]::IsNullOrEmpty($_) } | Select-Object -First 1
 # Scoop shims directory
 $SCOOP_SHIMS_DIR = "$SCOOP_DIR\shims"
+# Scoop buckets directory
+$SCOOP_BUCKETS_DIR = "$SCOOP_DIR\buckets"
 # Scoop itself directory
 $SCOOP_APP_DIR = "$SCOOP_DIR\apps\scoop\current"
 # Scoop main bucket directory
-$SCOOP_MAIN_BUCKET_DIR = "$SCOOP_DIR\buckets\main"
+$SCOOP_MAIN_BUCKET_DIR = "$SCOOP_BUCKETS_DIR\main"
 # Scoop config file location
 $SCOOP_CONFIG_HOME = $env:XDG_CONFIG_HOME, "$env:USERPROFILE\.config" | Select-Object -First 1
 $SCOOP_CONFIG_FILE = "$SCOOP_CONFIG_HOME\scoop\config.json"
 
-# TODO: Use a specific version of Scoop and the main bucket
-$SCOOP_PACKAGE_REPO = 'https://github.com/ScoopInstaller/Scoop/archive/master.zip'
-$SCOOP_MAIN_BUCKET_REPO = 'https://github.com/ScoopInstaller/Main/archive/master.zip'
-
-$SCOOP_PACKAGE_GIT_REPO = 'https://github.com/ScoopInstaller/Scoop.git'
-$SCOOP_MAIN_BUCKET_GIT_REPO = 'https://github.com/ScoopInstaller/Main.git'
+$ScoopSources = Get-Scoop-Source -ScoopAppRepoZip $ScoopAppRepoZip -ScoopAppRepoGit $ScoopAppRepoGit -ScoopMainBucketRepoZip $ScoopMainBucketRepoZip -ScoopMainBucketRepoGit $ScoopMainBucketRepoGit
 
 # Quit if anything goes wrong
 $oldErrorActionPreference = $ErrorActionPreference
