@@ -192,7 +192,7 @@ function Optimize-SecurityProtocol {
 function Get-Downloader {
     $downloadSession = New-Object System.Net.WebClient
 
-    # Set proxy to null if NoProxy is specificed
+    # Set proxy to null if NoProxy is specified
     if ($NoProxy) {
         $downloadSession.Proxy = $null
     } elseif ($Proxy) {
