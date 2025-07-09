@@ -22,8 +22,17 @@ scoop will be install to `C:\Users\<YOUR USERNAME>\scoop`.
 
 ```powershell
 irm get.scoop.sh | iex
-# You can use proxies if you have network trouble in accessing GitHub, e.g.
+```
+
+You can use proxies if you have network trouble in accessing GitHub, e.g.
+```powershell
 irm get.scoop.sh -Proxy 'http://<ip:port>' | iex
+```
+
+and with credentials
+```powershell
+$proxyCredential = Get-Credential
+irm get.scoop.sh -Proxy 'http://<ip:port>' -ProxyCredential $proxyCredential | iex
 ```
 
 ### Advanced Installation
