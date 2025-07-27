@@ -80,6 +80,13 @@ You can redirect all outputs to Out-Null or a log file to silence the installer.
 $LASTEXITCODE
 ```
 
+### Using Scoop apps in Git-Bash for Windows
+
+Install Scoop using PowerShell as normal and install apps through Scoop using PowerShell as well. Then let Git-Bash know where to find them by adding Scoop to your PATH:
+```bash
+echo 'export PATH="$HOME/scoop/shims:$PATH"' >> ~/.bashrc
+```
+
 ## License
 
 The project is released under the [Unlicense License](LICENSE) and into the public domain.
