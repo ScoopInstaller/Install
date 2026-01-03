@@ -50,6 +50,8 @@
     Use the credentials of the current user for the proxy server that is specified by the -Proxy parameter.
 .PARAMETER RunAsAdmin
     Force to run the installer as administrator.
+.PARAMETER Force
+    Ignore validation and warnings and force to run the installer.
 .LINK
     https://scoop.sh
 .LINK
@@ -63,7 +65,8 @@ param(
     [Uri] $Proxy,
     [System.Management.Automation.PSCredential] $ProxyCredential,
     [Switch] $ProxyUseDefaultCredentials,
-    [Switch] $RunAsAdmin
+    [Switch] $RunAsAdmin,
+    [Switch] $Force
 )
 
 # Disable StrictMode in this script
@@ -123,6 +126,65 @@ function Test-LanguageMode {
     }
 }
 
+function Test-PathFileSystem {
+    [CmdletBinding()]
+    [OutputType([bool])]
+    param (
+        [string] $Path
+    )
+
+    $Path = Split-Path -Path $Path -Qualifier -ErrorAction SilentlyContinue
+    if ($null -eq $Path) {
+        return $false
+    }
+
+    # Wrap the code in a job to avoid loading assemblies into the current session
+    $FileSystem = Start-Job -ScriptBlock {
+        $DebugPreference = $using:DebugPreference
+
+        Add-Type -Namespace Win32 -Name NativeMethods -UsingNamespace 'System.Text' -MemberDefinition @'
+[DllImport("kernel32.dll", SetLastError = true, CharSet = CharSet.Auto)]
+public static extern bool GetVolumeInformation(
+    string Volume, StringBuilder VolumeName, uint VolumeNameSize,
+    out uint SerialNumber, out uint SerialNumberLength,
+    out uint FileSystemFlags, StringBuilder FileSystem, uint FileSystemSize);
+'@
+
+        $VolumeName = [System.Text.StringBuilder]::new(1024)
+        $FileSystem = [System.Text.StringBuilder]::new(1024)
+        $SerialNumber = 0
+        $SerialNumberLength = 0
+        $FileSystemFlags = 0
+        # A trailing backslash is required
+        # ref: https://learn.microsoft.com/en-us/windows/win32/api/fileapi/nf-fileapi-getvolumeinformationa#parameters
+        $Volume = "$using:Path\"
+        Write-Debug "Test-PathFileSystem: $Volume"
+
+        $call = [Win32.NativeMethods]::GetVolumeInformation(
+            $Volume,
+            $VolumeName,
+            1024,
+            [ref] $SerialNumber,
+            [ref] $SerialNumberLength,
+            [ref] $FileSystemFlags,
+            $FileSystem,
+            1024
+        )
+
+        if ($call) {
+            Write-Debug "Test-PathFileSystem: VolumeName '$($VolumeName.ToString())'"
+            return $FileSystem.ToString()
+        } else {
+            $ErrorCode = [System.Runtime.InteropServices.Marshal]::GetLastWin32Error()
+            Write-Debug "Test-PathFileSystem: Error Code $ErrorCode"
+            return $null
+        }
+    } | Receive-Job -Wait
+
+    Write-Debug "Test-PathFileSystem: FileSystem '$FileSystem'"
+    return $FileSystem -eq 'NTFS'
+}
+
 function Test-ValidateParameter {
     if ($null -eq $Proxy -and ($null -ne $ProxyCredential -or $ProxyUseDefaultCredentials)) {
         Deny-Install 'Provide a valid proxy URI for the -Proxy parameter when using the -ProxyCredential or -ProxyUseDefaultCredentials.'
@@ -130,6 +192,22 @@ function Test-ValidateParameter {
 
     if ($ProxyUseDefaultCredentials -and $null -ne $ProxyCredential) {
         Deny-Install "ProxyUseDefaultCredentials is conflict with ProxyCredential. Don't use the -ProxyCredential and -ProxyUseDefaultCredentials together."
+    }
+
+    # Check of installing scoop to a path containing spaces
+    if (!$Force -and $SCOOP_DIR.Contains(' ')) {
+        Deny-Install "Installing Scoop to path '$SCOOP_DIR' containing spaces may cause unexpected behaviors, please choose another path."
+    }
+
+    # Ensure the directory to install scoop is empty
+    if (!$Force -and (Test-Path $SCOOP_DIR -PathType Container) -and [bool](Get-ChildItem $SCOOP_DIR -Force)) {
+        Deny-Install "You are trying to install Scoop to a non-empty directory '$SCOOP_DIR', please choose another directory."
+    }
+
+    # Ensure the directory to install scoop is on an NTFS file system, which
+    # is required for NTFS features like hard links and NTFS junctions
+    if (!($Force -or (Test-PathFileSystem $SCOOP_DIR))) {
+        Deny-Install "The path '$SCOOP_DIR' is not on an NTFS file system, please choose another directory."
     }
 }
 
