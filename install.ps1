@@ -93,8 +93,10 @@ function Exit-Install {
         [Int] $ErrorCode = 1
     )
 
-    # Don't abort if invoked with iex that would close the PS session
     if ($IS_EXECUTED_FROM_IEX) {
+        # Don't abort with `exit` that would close the PS session if invoked
+        # with iex, yet set `LASTEXITCODE` for the caller to check
+        $Global:LASTEXITCODE = $ErrorCode
         break
     } else {
         exit $ErrorCode
@@ -607,7 +609,7 @@ function Install-Scoop {
             $downloadZipsRequired = $False
         } catch {
             Write-Warning "$($_.Exception.Message)"
-            $Global:LastExitCode = 0
+            $Global:LASTEXITCODE = 0
         } finally {
             $env:HTTPS_PROXY = $old_https
             $env:HTTP_PROXY = $old_http
