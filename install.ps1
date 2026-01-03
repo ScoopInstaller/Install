@@ -197,7 +197,7 @@ function Optimize-SecurityProtocol {
 function Get-Downloader {
     $downloadSession = New-Object System.Net.WebClient
 
-    # Set proxy to null if NoProxy is specificed
+    # Set proxy to null if NoProxy is specified
     if ($NoProxy) {
         $downloadSession.Proxy = $null
     } elseif ($Proxy) {
@@ -561,7 +561,7 @@ function Add-DefaultConfig {
         }
     }
 
-    # save current datatime to last_update
+    # save current datetime to last_update
     Add-Config -Name 'last_update' -Value ([System.DateTime]::Now.ToString('o')) | Out-Null
 }
 
@@ -653,7 +653,7 @@ function Install-Scoop {
     }
     # Create the scoop shim
     Import-ScoopShim
-    # Finially ensure scoop shims is in the PATH
+    # Ensure scoop shims is in the PATH
     Add-ShimsDirToPath
     # Setup initial configuration of Scoop
     Add-DefaultConfig

@@ -2,10 +2,10 @@
     # Only diagnostic records of the specified severity will be generated.
     # Uncomment the following line if you only want Errors and Warnings but
     # not Information diagnostic records.
-    Severity = @('Error','Warning')
+    Severity     = @('Error', 'Warning')
 
     # Analyze **only** the following rules. Use IncludeRules when you want
-    # to invoke only a small subset of the defualt rules.
+    # to invoke only a small subset of the default rules.
     # IncludeRules = @('PSAvoidDefaultValueSwitchParameter',
     #                  'PSMisleadingBacktick',
     #                  'PSMissingModuleManifestField',
