@@ -18,7 +18,7 @@
 ### Typical Installation
 
 Run this command from a **non-admin** PowerShell to install scoop with default configuration,
-scoop will be install to `C:\Users\<YOUR USERNAME>\scoop`.
+scoop will be installed to `C:\Users\<YOUR USERNAME>\scoop`.
 
 ```powershell
 irm get.scoop.sh | iex
