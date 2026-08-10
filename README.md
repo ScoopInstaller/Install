@@ -1,7 +1,7 @@
 # Scoop (un)installer
 
 [![ci-badge](https://github.com/ScoopInstaller/Install/actions/workflows/ci.yml/badge.svg)](https://github.com/ScoopInstaller/Install/actions/workflows/ci.yml)
-
+Pathum25 
 ## Installation
 
 ### Prerequisites
@@ -29,7 +29,7 @@ You can use proxies if you have network trouble in accessing GitHub.
 ```powershell
 iex "& {$(irm get.scoop.sh -Proxy 'http://<ip:port>')} -Proxy 'http://<ip:port>'"
 
-# or
+# or Pathum25 
 $env:HTTP_PROXY='http://<ip:port>'
 $env:HTTPS_PROXY='http://<ip:port>'
 irm get.scoop.sh | iex
