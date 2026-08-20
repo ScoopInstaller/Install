@@ -92,13 +92,20 @@ for GitHub Actions:
 ```yaml
 - name: Install Scoop
   shell: pwsh
+  run: irm get.scoop.sh | iex
+```
+
+If the CI environment does not have the `$env:CI` variable set, you might need
+to explicitly `exit $LASTEXITCODE` to propagate the installation result to the
+pipeline, or set `$env:CI` before the installation command.
+
+```yaml
+- name: Install Scoop
+  shell: pwsh
   run: |
     irm get.scoop.sh | iex
     exit $LASTEXITCODE
 ```
-
-Make sure to `exit $LASTEXITCODE` to propagate the installation result to the
-pipeline when using the `iex`-style installation.
 
 ### Silent Installation
 

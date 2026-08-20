@@ -93,9 +93,9 @@ function Exit-Install {
         [Int] $ErrorCode = 1
     )
 
-    if ($IS_EXECUTED_FROM_IEX) {
-        # Don't abort with `exit` that would close the PS session if invoked
-        # with iex, yet set `LASTEXITCODE` for the caller to check
+    if ((-not $env:CI) -and $IS_EXECUTED_FROM_IEX) {
+        # Don't abort with `exit` that would close the interactive PS session
+        # if invoked with iex, yet set `LASTEXITCODE` for the caller to check
         $Global:LASTEXITCODE = $ErrorCode
         break
     } else {
@@ -157,8 +157,8 @@ function Test-Prerequisite {
 
     # Detect if RunAsAdministrator, there is no need to run as administrator when installing Scoop
     if (!$RunAsAdmin -and (Test-IsAdministrator)) {
-        # Exception: Windows Sandbox, GitHub Actions CI
-        $exception = ($env:USERNAME -eq 'WDAGUtilityAccount') -or ($env:GITHUB_ACTIONS -eq 'true' -and $env:CI -eq 'true')
+        # Exception: CI, Windows Sandbox
+        $exception = $env:CI -or ($env:USERNAME -eq 'WDAGUtilityAccount')
         if (!$exception) {
             Deny-Install 'Running the installer as administrator is disabled by default, see https://github.com/ScoopInstaller/Install#for-admin for details.'
         }
