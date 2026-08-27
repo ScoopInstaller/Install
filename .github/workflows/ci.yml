@@ -42,3 +42,19 @@ jobs:
         uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
       - name: Run tests
         run: ./.github/scripts/e2e-test.ps1
+  ci_iex:
+    name: CI IEX Simulation
+    runs-on: windows-latest
+    strategy:
+      matrix:
+        shell: [powershell, pwsh]
+    defaults:
+      run:
+        shell: ${{ matrix.shell }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+      - name: Run
+        run: |
+          Get-Content -Raw -Path ./install.ps1 | Invoke-Expression
+          scoop help
