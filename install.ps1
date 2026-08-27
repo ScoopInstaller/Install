@@ -141,7 +141,7 @@ function Test-ValidateParameter {
         Deny-Install "'$SCOOP_DIR' is a file, please remove it or specify another path."
     }
 
-    if ((Test-Path $SCOOP_DIR -PathType Container) -and [bool](Get-ChildItem $SCOOP_DIR -ErrorAction SilentlyContinue)) {
+    if ((Test-Path $SCOOP_DIR -PathType Container) -and (Test-Path "$SCOOP_DIR\*")) {
         Deny-Install "'$SCOOP_DIR' exists and is not empty, please specify another path."
     }
 
@@ -149,7 +149,7 @@ function Test-ValidateParameter {
         Deny-Install "'$SCOOP_GLOBAL_DIR' is a file, please remove it or specify another path."
     }
 
-    if ((Test-Path $SCOOP_GLOBAL_DIR -PathType Container) -and [bool](Get-ChildItem $SCOOP_GLOBAL_DIR -ErrorAction SilentlyContinue)) {
+    if ((Test-Path $SCOOP_GLOBAL_DIR -PathType Container) -and (Test-Path "$SCOOP_GLOBAL_DIR\*")) {
         Deny-Install "'$SCOOP_GLOBAL_DIR' exists and is not empty, please specify another path."
     }
 
