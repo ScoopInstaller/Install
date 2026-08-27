@@ -1,9 +1,6 @@
 BeforeAll {
-    $script:TestScoopDir = Join-Path $TestDrive 'scoop'
-    $script:TestGlobalDir = Join-Path $TestDrive 'scoop-global'
-
-    $env:SCOOP = $script:TestScoopDir
-    $env:SCOOP_GLOBAL = $script:TestGlobalDir
+    $env:SCOOP = Join-Path $TestDrive 'scoop'
+    $env:SCOOP_GLOBAL = Join-Path $TestDrive 'scoop-global'
 
     # Load SUT
     $sut = (Split-Path -Leaf $PSCommandPath).Replace('.Tests.ps1', '.ps1')
