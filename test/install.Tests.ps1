@@ -48,6 +48,79 @@ Describe 'Get-Downloader' -Tag 'Proxy' {
     }
 }
 
+Describe 'Test-ValidateParameter' -Tag 'PathValidation' {
+    It 'rejects invalid characters in <PathVariable>' -TestCases @(
+        @{ PathVariable = 'SCOOP_DIR'; InvalidLeaf = 'invalid-root-with*asterisk' }
+        @{ PathVariable = 'SCOOP_GLOBAL_DIR'; InvalidLeaf = 'invalid-global-with*asterisk' }
+        @{ PathVariable = 'SCOOP_CACHE_DIR'; InvalidLeaf = 'invalid-cache-with*asterisk' }
+    ) {
+        param(
+            [string] $PathVariable,
+            [string] $InvalidLeaf
+        )
+
+        Mock Deny-Install {}
+
+        $InvalidPath = Join-Path $TestDrive $InvalidLeaf
+
+        Set-Variable -Name $PathVariable -Value $InvalidPath
+
+        Test-ValidateParameter
+
+        Should -Invoke Deny-Install -Times 1 -Exactly -ParameterFilter {
+            $Message -like "*'$InvalidPath' is not a valid path*"
+        }
+    }
+
+    It 'rejects when path <PathVariable> is a file' -TestCases @(
+        @{ PathVariable = 'SCOOP_DIR'; InvalidLeaf = 'invalid-root-file.txt' }
+        @{ PathVariable = 'SCOOP_GLOBAL_DIR'; InvalidLeaf = 'invalid-global-file.txt' }
+        @{ PathVariable = 'SCOOP_CACHE_DIR'; InvalidLeaf = 'invalid-cache-file.txt' }
+    ) {
+        param(
+            [string] $PathVariable,
+            [string] $InvalidLeaf
+        )
+
+        Mock Deny-Install {}
+
+        $InvalidPath = Join-Path $TestDrive $InvalidLeaf
+        New-Item -Path $InvalidPath -ItemType File | Out-Null
+
+        Set-Variable -Name $PathVariable -Value $InvalidPath
+
+        Test-ValidateParameter
+
+        Should -Invoke Deny-Install -Times 1 -Exactly -ParameterFilter {
+            $Message -like "*'$InvalidPath' is a file*"
+        }
+    }
+
+    It 'rejects when path <PathVariable> is not empty' -TestCases @(
+        @{ PathVariable = 'SCOOP_DIR'; InvalidLeaf = 'invalid-root-nonempty' }
+        @{ PathVariable = 'SCOOP_GLOBAL_DIR'; InvalidLeaf = 'invalid-global-nonempty' }
+    ) {
+        param(
+            [string] $PathVariable,
+            [string] $InvalidLeaf
+        )
+
+        Mock Deny-Install {}
+
+        $InvalidPath = Join-Path $TestDrive $InvalidLeaf
+        New-Item -Path $InvalidPath -ItemType Directory | Out-Null
+        New-Item -Path (Join-Path $InvalidPath 'dummy.txt') -ItemType File | Out-Null
+
+        Set-Variable -Name $PathVariable -Value $InvalidPath
+
+        Test-ValidateParameter
+
+        Should -Invoke Deny-Install -Times 1 -Exactly -ParameterFilter {
+            $Message -like "*'$InvalidPath' exists and is not empty*"
+        }
+    }
+}
+
 Describe 'Test-CommandAvailable' -Tag 'CommandLine' {
     Context 'Command available' {
         It 'Returns $true' {
