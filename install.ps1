@@ -680,9 +680,6 @@ function Write-DebugInfo {
     Write-Verbose "SCOOP_CONFIG_HOME: $SCOOP_CONFIG_HOME"
 }
 
-# Quit if anything goes wrong
-$ErrorActionPreference = 'Stop'
-
 # Prepare variables
 $IS_EXECUTED_FROM_IEX = ($null -eq $MyInvocation.MyCommand.Path)
 
@@ -714,7 +711,13 @@ $SCOOP_MAIN_BUCKET_GIT_REPO = 'https://github.com/ScoopInstaller/Main.git'
 # installation, and only the functions will be loaded, e.g., for testing.
 # Downstreams can call `Install-Scoop` explicitly to start the installation.
 if ($MyInvocation.InvocationName -ne '.') {
-    Test-LanguageMode
-    Write-DebugInfo $PSBoundParameters
-    Install-Scoop
+    $oldErrorActionPreference = $ErrorActionPreference
+    try {
+        $ErrorActionPreference = 'Stop'
+        Test-LanguageMode
+        Write-DebugInfo $PSBoundParameters
+        Install-Scoop
+    } finally {
+        $ErrorActionPreference = $oldErrorActionPreference
+    }
 }
