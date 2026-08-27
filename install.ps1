@@ -132,11 +132,6 @@ function Test-ValidateParameter {
         Deny-Install "ProxyUseDefaultCredentials is conflict with ProxyCredential. Don't use the -ProxyCredential and -ProxyUseDefaultCredentials together."
     }
 
-    # Avoid installing Scoop to a path containing spaces
-    if ($SCOOP_DIR.Contains(' ')) {
-        Deny-Install "Installing Scoop to path '$SCOOP_DIR' containing spaces may cause unexpected behaviors, please specify another path."
-    }
-
     if (Test-Path $SCOOP_DIR -PathType Leaf) {
         Deny-Install "'$SCOOP_DIR' is a file, please remove it or specify another path."
     }
