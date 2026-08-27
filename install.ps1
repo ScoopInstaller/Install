@@ -131,6 +131,38 @@ function Test-ValidateParameter {
     if ($ProxyUseDefaultCredentials -and $null -ne $ProxyCredential) {
         Deny-Install "ProxyUseDefaultCredentials is conflict with ProxyCredential. Don't use the -ProxyCredential and -ProxyUseDefaultCredentials together."
     }
+
+    if (-not (Test-Path $SCOOP_DIR -IsValid)) {
+        Deny-Install "'$SCOOP_DIR' is not a valid path, please specify another path."
+    }
+
+    if (-not (Test-Path $SCOOP_GLOBAL_DIR -IsValid)) {
+        Deny-Install "'$SCOOP_GLOBAL_DIR' is not a valid path, please specify another path."
+    }
+
+    if (-not (Test-Path $SCOOP_CACHE_DIR -IsValid)) {
+        Deny-Install "'$SCOOP_CACHE_DIR' is not a valid path, please specify another path."
+    }
+
+    if (Test-Path $SCOOP_DIR -PathType Leaf) {
+        Deny-Install "'$SCOOP_DIR' is a file, please remove it or specify another path."
+    }
+
+    if ((Test-Path $SCOOP_DIR -PathType Container) -and (Test-Path "$SCOOP_DIR\*")) {
+        Deny-Install "'$SCOOP_DIR' exists and is not empty, please specify another path."
+    }
+
+    if (Test-Path $SCOOP_GLOBAL_DIR -PathType Leaf) {
+        Deny-Install "'$SCOOP_GLOBAL_DIR' is a file, please remove it or specify another path."
+    }
+
+    if ((Test-Path $SCOOP_GLOBAL_DIR -PathType Container) -and (Test-Path "$SCOOP_GLOBAL_DIR\*")) {
+        Deny-Install "'$SCOOP_GLOBAL_DIR' exists and is not empty, please specify another path."
+    }
+
+    if (Test-Path $SCOOP_CACHE_DIR -PathType Leaf) {
+        Deny-Install "'$SCOOP_CACHE_DIR' is a file, please remove it or specify another path."
+    }
 }
 
 function Test-IsAdministrator {
