@@ -1,9 +1,11 @@
 BeforeAll {
     $script:OriginalScoop = $env:SCOOP
     $script:OriginalScoopGlobal = $env:SCOOP_GLOBAL
+    $script:OriginalScoopNoInstall = $env:SCOOP_NOINSTALL
 
     $env:SCOOP = Join-Path $TestDrive 'scoop'
     $env:SCOOP_GLOBAL = Join-Path $TestDrive 'scoop-global'
+    $env:SCOOP_NOINSTALL = 'true'
 
     # Load SUT
     $sut = (Split-Path -Leaf $PSCommandPath).Replace('.Tests.ps1', '.ps1')
@@ -21,6 +23,12 @@ AfterAll {
         Remove-Item Env:SCOOP_GLOBAL -ErrorAction SilentlyContinue
     } else {
         $env:SCOOP_GLOBAL = $script:OriginalScoopGlobal
+    }
+
+    if ($null -eq $script:OriginalScoopNoInstall) {
+        Remove-Item Env:SCOOP_NOINSTALL -ErrorAction SilentlyContinue
+    } else {
+        $env:SCOOP_NOINSTALL = $script:OriginalScoopNoInstall
     }
 }
 
