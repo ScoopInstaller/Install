@@ -575,10 +575,10 @@ function Test-CommandAvailable {
 
 function Install-Scoop {
     Write-InstallInfo 'Initializing...'
-    # Validate install parameters
-    Test-ValidateParameter
     # Check prerequisites
     Test-Prerequisite
+    # Validate install parameters
+    Test-ValidateParameter
     # Enable TLS 1.2
     Optimize-SecurityProtocol
 
@@ -683,9 +683,6 @@ function Write-DebugInfo {
 # Prepare variables
 $IS_EXECUTED_FROM_IEX = ($null -eq $MyInvocation.MyCommand.Path)
 
-# Abort when the language mode is restricted
-Test-LanguageMode
-
 # Scoop root directory
 $SCOOP_DIR = $ScoopDir, $env:SCOOP, "$env:USERPROFILE\scoop" | Where-Object { -not [String]::IsNullOrEmpty($_) } | Select-Object -First 1
 # Scoop global apps directory
@@ -709,14 +706,18 @@ $SCOOP_MAIN_BUCKET_REPO = 'https://github.com/ScoopInstaller/Main/archive/master
 $SCOOP_PACKAGE_GIT_REPO = 'https://github.com/ScoopInstaller/Scoop.git'
 $SCOOP_MAIN_BUCKET_GIT_REPO = 'https://github.com/ScoopInstaller/Main.git'
 
-# Quit if anything goes wrong
-$oldErrorActionPreference = $ErrorActionPreference
-$ErrorActionPreference = 'Stop'
-
-# Logging debug info
-Write-DebugInfo $PSBoundParameters
-# Bootstrap function
-Install-Scoop
-
-# Reset $ErrorActionPreference to original value
-$ErrorActionPreference = $oldErrorActionPreference
+# The install flow triggers only when the script is executed directly, but
+# not when dot-sourced. Dot-sourcing the installer will not trigger the
+# installation, and only the functions will be loaded, e.g., for testing.
+# Downstreams can call `Install-Scoop` explicitly to start the installation.
+if ($MyInvocation.InvocationName -ne '.') {
+    $oldErrorActionPreference = $ErrorActionPreference
+    try {
+        $ErrorActionPreference = 'Stop'
+        Test-LanguageMode
+        Write-DebugInfo $PSBoundParameters
+        Install-Scoop
+    } finally {
+        $ErrorActionPreference = $oldErrorActionPreference
+    }
+}
