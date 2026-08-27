@@ -712,6 +712,26 @@ function Write-DebugInfo {
     Write-Verbose "SCOOP_CONFIG_HOME: $SCOOP_CONFIG_HOME"
 }
 
+function Test-ShouldRunInstall {
+    param(
+        [Parameter(Mandatory = $True)]
+        [String] $InvocationName
+    )
+
+    # not dot-sourced, run the install flow
+    if ($InvocationName -ne '.') {
+        return $true
+    }
+
+    # dot-sourced, but not in CI, don't run the install flow
+    if (-not $env:CI) {
+        return $false
+    }
+
+    # dot-sourced, in CI, determined by env SCOOP_NOINSTALL
+    return (-not $env:SCOOP_NOINSTALL)
+}
+
 # Prepare variables
 $IS_EXECUTED_FROM_IEX = ($null -eq $MyInvocation.MyCommand.Path)
 
@@ -742,7 +762,12 @@ $SCOOP_MAIN_BUCKET_GIT_REPO = 'https://github.com/ScoopInstaller/Main.git'
 # not when dot-sourced. Dot-sourcing the installer will not trigger the
 # installation, and only the functions will be loaded, e.g., for testing.
 # Downstreams can call `Install-Scoop` explicitly to start the installation.
-if ($MyInvocation.InvocationName -ne '.') {
+# In CI, dot-sourced execution is allowed by default as GitHub Actions executors
+# run the job step in a dot-sourced session. To disable the install flow in CI,
+# set `SCOOP_NOINSTALL=true` to force dot-sourced CI sessions to only
+# load functions.
+$shouldRunInstall = Test-ShouldRunInstall -InvocationName $MyInvocation.InvocationName
+if ($shouldRunInstall) {
     $oldErrorActionPreference = $ErrorActionPreference
     try {
         $ErrorActionPreference = 'Stop'
