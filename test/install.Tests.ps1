@@ -1,10 +1,27 @@
 BeforeAll {
+    $script:OriginalScoop = $env:SCOOP
+    $script:OriginalScoopGlobal = $env:SCOOP_GLOBAL
+
     $env:SCOOP = Join-Path $TestDrive 'scoop'
     $env:SCOOP_GLOBAL = Join-Path $TestDrive 'scoop-global'
 
     # Load SUT
     $sut = (Split-Path -Leaf $PSCommandPath).Replace('.Tests.ps1', '.ps1')
     . ".\$sut"
+}
+
+AfterAll {
+    if ($null -eq $script:OriginalScoop) {
+        Remove-Item Env:SCOOP -ErrorAction SilentlyContinue
+    } else {
+        $env:SCOOP = $script:OriginalScoop
+    }
+
+    if ($null -eq $script:OriginalScoopGlobal) {
+        Remove-Item Env:SCOOP_GLOBAL -ErrorAction SilentlyContinue
+    } else {
+        $env:SCOOP_GLOBAL = $script:OriginalScoopGlobal
+    }
 }
 
 Describe 'Get-Downloader' -Tag 'Proxy' {
