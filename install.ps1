@@ -714,7 +714,6 @@ function Write-DebugInfo {
 
 function Test-ShouldRunInstall {
     param(
-        [Parameter(Mandatory = $True)]
         [String] $InvocationName
     )
 
