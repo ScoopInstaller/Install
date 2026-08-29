@@ -755,7 +755,8 @@ $SCOOP_APP_DIR = "$SCOOP_DIR\apps\scoop\current"
 # Scoop main bucket directory
 $SCOOP_MAIN_BUCKET_DIR = "$SCOOP_DIR\buckets\main"
 # Scoop config file location
-$SCOOP_CONFIG_HOME = $env:XDG_CONFIG_HOME, "$env:USERPROFILE\.config" | Select-Object -First 1
+$SCOOP_LEGACY_CONFIG = if (Test-Path "$env:USERPROFILE\.config") { "$env:USERPROFILE\.config" }
+$SCOOP_CONFIG_HOME = $env:XDG_CONFIG_HOME, $SCOOP_LEGACY_CONFIG, "$SCOOP_DIR\persist" | Select-Object -First 1
 $SCOOP_CONFIG_FILE = "$SCOOP_CONFIG_HOME\scoop\config.json"
 
 # TODO: Use a specific version of Scoop and the main bucket
