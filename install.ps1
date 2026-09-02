@@ -123,6 +123,65 @@ function Test-LanguageMode {
     }
 }
 
+function Test-PathFileSystem {
+    [CmdletBinding()]
+    [OutputType([bool])]
+    param (
+        [string] $Path
+    )
+
+    $Path = Split-Path -Path $Path -Qualifier -ErrorAction SilentlyContinue
+    if ($null -eq $Path) {
+        return $false
+    }
+
+    # Wrap the code in a job to avoid loading assemblies into the current session
+    $FileSystem = Start-Job -ScriptBlock {
+        $DebugPreference = $using:DebugPreference
+
+        Add-Type -Namespace Win32 -Name NativeMethods -UsingNamespace 'System.Text' -MemberDefinition @'
+[DllImport("kernel32.dll", SetLastError = true, CharSet = CharSet.Auto)]
+public static extern bool GetVolumeInformation(
+    string Volume, StringBuilder VolumeName, uint VolumeNameSize,
+    out uint SerialNumber, out uint SerialNumberLength,
+    out uint FileSystemFlags, StringBuilder FileSystem, uint FileSystemSize);
+'@
+
+        $VolumeName = [System.Text.StringBuilder]::new(1024)
+        $FileSystem = [System.Text.StringBuilder]::new(1024)
+        $SerialNumber = 0
+        $SerialNumberLength = 0
+        $FileSystemFlags = 0
+        # A trailing backslash is required
+        # ref: https://learn.microsoft.com/en-us/windows/win32/api/fileapi/nf-fileapi-getvolumeinformationa#parameters
+        $Volume = "$using:Path\"
+        Write-Debug "Test-PathFileSystem: $Volume"
+
+        $call = [Win32.NativeMethods]::GetVolumeInformation(
+            $Volume,
+            $VolumeName,
+            1024,
+            [ref] $SerialNumber,
+            [ref] $SerialNumberLength,
+            [ref] $FileSystemFlags,
+            $FileSystem,
+            1024
+        )
+
+        if ($call) {
+            Write-Debug "Test-PathFileSystem: VolumeName '$($VolumeName.ToString())'"
+            return $FileSystem.ToString()
+        } else {
+            $ErrorCode = [System.Runtime.InteropServices.Marshal]::GetLastWin32Error()
+            Write-Debug "Test-PathFileSystem: Error Code $ErrorCode"
+            return $null
+        }
+    } | Receive-Job -Wait
+
+    Write-Debug "Test-PathFileSystem: FileSystem '$FileSystem'"
+    return $FileSystem -eq 'NTFS'
+}
+
 function Test-ValidateParameter {
     if ($null -eq $Proxy -and ($null -ne $ProxyCredential -or $ProxyUseDefaultCredentials)) {
         Deny-Install 'Provide a valid proxy URI for the -Proxy parameter when using the -ProxyCredential or -ProxyUseDefaultCredentials.'
@@ -162,6 +221,17 @@ function Test-ValidateParameter {
 
     if (Test-Path $SCOOP_CACHE_DIR -PathType Leaf) {
         Deny-Install "'$SCOOP_CACHE_DIR' is a file, please remove it or specify another path."
+    }
+
+    # Check of installing scoop to a path containing spaces
+    if ($SCOOP_DIR.Contains(' ')) {
+        Deny-Install "Installing Scoop to path '$SCOOP_DIR' containing spaces may cause unexpected behaviors, please specify another path."
+    }
+
+    # Ensure the directory to install scoop is on an NTFS file system, which
+    # is required for NTFS features like hard links and NTFS junctions
+    if (-not (Test-PathFileSystem $SCOOP_DIR)) {
+        Deny-Install "The path '$SCOOP_DIR' is not on an NTFS file system, please specify another path."
     }
 }
 
