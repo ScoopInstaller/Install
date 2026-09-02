@@ -1,73 +1,67 @@
-name: Scoop Installer CI Tests
+name: CI
 
 on:
   push:
   pull_request:
   workflow_dispatch:
 
+permissions: {}
+
 jobs:
-  test_powershell:
-    name: WindowsPowerShell
+  unit_test:
+    name: Unit Test
     runs-on: windows-latest
+    strategy:
+      matrix:
+        shell: [powershell, pwsh]
+    defaults:
+      run:
+        shell: ${{ matrix.shell }}
     steps:
       - name: Checkout
-        uses: actions/checkout@main
+        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
         with:
+          # Need at least 2 commits to properly gather changed files for linting
           fetch-depth: 2
-      - name: Init Test Suite
-        uses: potatoqualitee/psmodulecache@v5.1
+          persist-credentials: false
+      - name: Install and cache test dependencies
+        uses: potatoqualitee/psmodulecache@ee5e9494714abf56f6efbfa51527b2aec5c761b8 # v6.2.1
         with:
           modules-to-cache: PSScriptAnalyzer, BuildHelpers, Pester
-          shell: powershell
-      - name: Test Scoop Installer
-        shell: powershell
+          shell: ${{ matrix.shell }}
+      - name: Run tests
         run: ./test/bin/test.ps1
-      - name: Test Scoop Install command
-        shell: powershell
-        run: |
-          ./install.ps1 -RunAsAdmin
-          echo "$Env:USERPROFILE\scoop\shims" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
-      - name: Test scoop command availability
-        shell: powershell
-        run: scoop help
-  test_pwsh_cloning:
-    name: PowerShell (with cloning)
+  e2e_test:
+    name: E2E Test
     runs-on: windows-latest
+    strategy:
+      matrix:
+        shell: [powershell, pwsh]
+    defaults:
+      run:
+        shell: ${{ matrix.shell }}
     steps:
       - name: Checkout
-        uses: actions/checkout@main
+        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
         with:
-          fetch-depth: 2
-      - name: Init Test Suite
-        uses: potatoqualitee/psmodulecache@v5.1
-        with:
-          modules-to-cache: PSScriptAnalyzer, BuildHelpers, Pester
-          shell: pwsh
-      - name: Test Scoop Installer
-        shell: pwsh
-        run: ./test/bin/test.ps1
-      - name: Test Scoop Install command
-        shell: pwsh
-        run: |
-          ./install.ps1 -RunAsAdmin
-          echo "~\scoop\shims" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
-      - name: Test scoop command availability
-        shell: pwsh
-        run: scoop help
-  test_pwsh_download:
-    name: PowerShell (with downloading)
+          persist-credentials: false
+      - name: Run tests
+        run: ./.github/scripts/e2e-test.ps1
+  ci_iex:
+    name: CI IEX Simulation
     runs-on: windows-latest
+    strategy:
+      matrix:
+        shell: [powershell, pwsh]
+    defaults:
+      run:
+        shell: ${{ matrix.shell }}
     steps:
       - name: Checkout
-        uses: actions/checkout@main
+        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
         with:
-          fetch-depth: 2
-      - name: Test Scoop Install command
-        shell: pwsh
+          persist-credentials: false
+      - name: Run
         run: |
-          git config --global protocol.https.allow never
-          ./install.ps1 -RunAsAdmin
-          echo "~\scoop\shims" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
-      - name: Test scoop command availability
-        shell: pwsh
-        run: scoop help
+          Get-Content -Raw -Path ./install.ps1 | Invoke-Expression
+          scoop help

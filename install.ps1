@@ -50,8 +50,6 @@
     Use the credentials of the current user for the proxy server that is specified by the -Proxy parameter.
 .PARAMETER RunAsAdmin
     Force to run the installer as administrator.
-.PARAMETER Force
-    Ignore validation and warnings and force to run the installer.
 .LINK
     https://scoop.sh
 .LINK
@@ -65,8 +63,7 @@ param(
     [Uri] $Proxy,
     [System.Management.Automation.PSCredential] $ProxyCredential,
     [Switch] $ProxyUseDefaultCredentials,
-    [Switch] $RunAsAdmin,
-    [Switch] $Force
+    [Switch] $RunAsAdmin
 )
 
 # Disable StrictMode in this script
@@ -91,20 +88,38 @@ function Write-InstallInfo {
     $host.UI.RawUI.ForegroundColor = $backup
 }
 
-function Deny-Install {
+function Exit-Install {
     param(
-        [String] $message,
-        [Int] $errorCode = 1
+        [Int] $ErrorCode = 1
     )
 
-    Write-InstallInfo -String $message -ForegroundColor DarkRed
-    Write-InstallInfo 'Abort.'
-
-    # Don't abort if invoked with iex that would close the PS session
-    if ($IS_EXECUTED_FROM_IEX) {
+    if ((-not $env:CI) -and $IS_EXECUTED_FROM_IEX) {
+        # Don't abort with `exit` that would close the interactive PS session
+        # if invoked with iex, yet set `LASTEXITCODE` for the caller to check
+        $Global:LASTEXITCODE = $ErrorCode
         break
     } else {
-        exit $errorCode
+        exit $ErrorCode
+    }
+}
+
+function Deny-Install {
+    param(
+        [String] $Message,
+        [Int] $ErrorCode = 1
+    )
+
+    Write-InstallInfo -String $Message -ForegroundColor DarkRed
+    Write-InstallInfo 'Abort.'
+    Exit-Install -ErrorCode $ErrorCode
+}
+
+function Test-LanguageMode {
+    if ($ExecutionContext.SessionState.LanguageMode -ne 'FullLanguage') {
+        # `Write-InstallInfo` cannot be used here as it depends on FullLanguage mode
+        Write-Output 'Scoop requires PowerShell FullLanguage mode to run, current PowerShell environment is restricted.'
+        Write-Output 'Abort.'
+        Exit-Install
     }
 }
 
@@ -176,20 +191,47 @@ function Test-ValidateParameter {
         Deny-Install "ProxyUseDefaultCredentials is conflict with ProxyCredential. Don't use the -ProxyCredential and -ProxyUseDefaultCredentials together."
     }
 
-    # Check of installing scoop to a path containing spaces
-    if (!$Force -and $SCOOP_DIR.Contains(' ')) {
-        Deny-Install "Installing Scoop to path '$SCOOP_DIR' containing spaces may cause unexpected behaviors, please choose another path."
+    if (-not (Test-Path $SCOOP_DIR -IsValid)) {
+        Deny-Install "'$SCOOP_DIR' is not a valid path, please specify another path."
     }
 
-    # Ensure the directory to install scoop is empty
-    if (!$Force -and (Test-Path $SCOOP_DIR -PathType Container) -and [bool](Get-ChildItem $SCOOP_DIR -Force)) {
-        Deny-Install "You are trying to install Scoop to a non-empty directory '$SCOOP_DIR', please choose another directory."
+    if (-not (Test-Path $SCOOP_GLOBAL_DIR -IsValid)) {
+        Deny-Install "'$SCOOP_GLOBAL_DIR' is not a valid path, please specify another path."
+    }
+
+    if (-not (Test-Path $SCOOP_CACHE_DIR -IsValid)) {
+        Deny-Install "'$SCOOP_CACHE_DIR' is not a valid path, please specify another path."
+    }
+
+    if (Test-Path $SCOOP_DIR -PathType Leaf) {
+        Deny-Install "'$SCOOP_DIR' is a file, please remove it or specify another path."
+    }
+
+    if ((Test-Path $SCOOP_DIR -PathType Container) -and (Test-Path "$SCOOP_DIR\*")) {
+        Deny-Install "'$SCOOP_DIR' exists and is not empty, please specify another path."
+    }
+
+    if (Test-Path $SCOOP_GLOBAL_DIR -PathType Leaf) {
+        Deny-Install "'$SCOOP_GLOBAL_DIR' is a file, please remove it or specify another path."
+    }
+
+    if ((Test-Path $SCOOP_GLOBAL_DIR -PathType Container) -and (Test-Path "$SCOOP_GLOBAL_DIR\*")) {
+        Deny-Install "'$SCOOP_GLOBAL_DIR' exists and is not empty, please specify another path."
+    }
+
+    if (Test-Path $SCOOP_CACHE_DIR -PathType Leaf) {
+        Deny-Install "'$SCOOP_CACHE_DIR' is a file, please remove it or specify another path."
+    }
+
+    # Check of installing scoop to a path containing spaces
+    if ($SCOOP_DIR.Contains(' ')) {
+        Deny-Install "Installing Scoop to path '$SCOOP_DIR' containing spaces may cause unexpected behaviors, please specify another path."
     }
 
     # Ensure the directory to install scoop is on an NTFS file system, which
     # is required for NTFS features like hard links and NTFS junctions
-    if (!($Force -or (Test-PathFileSystem $SCOOP_DIR))) {
-        Deny-Install "The path '$SCOOP_DIR' is not on an NTFS file system, please choose another directory."
+    if (-not (Test-PathFileSystem $SCOOP_DIR)) {
+        Deny-Install "The path '$SCOOP_DIR' is not on an NTFS file system, please specify another path."
     }
 }
 
@@ -217,8 +259,8 @@ function Test-Prerequisite {
 
     # Detect if RunAsAdministrator, there is no need to run as administrator when installing Scoop
     if (!$RunAsAdmin -and (Test-IsAdministrator)) {
-        # Exception: Windows Sandbox, GitHub Actions CI
-        $exception = ($env:USERNAME -eq 'WDAGUtilityAccount') -or ($env:GITHUB_ACTIONS -eq 'true' -and $env:CI -eq 'true')
+        # Exception: CI, Windows Sandbox
+        $exception = $env:CI -or ($env:USERNAME -eq 'WDAGUtilityAccount')
         if (!$exception) {
             Deny-Install 'Running the installer as administrator is disabled by default, see https://github.com/ScoopInstaller/Install#for-admin for details.'
         }
@@ -232,7 +274,7 @@ function Test-Prerequisite {
 
     # Test if scoop is installed, by checking if scoop command exists.
     if (Test-CommandAvailable('scoop')) {
-        Deny-Install "Scoop is already installed. Run 'scoop update' to get the latest version."
+        Deny-Install "Scoop is already installed. Run 'scoop update' to get the latest version." -ErrorCode 0
     }
 }
 
@@ -257,7 +299,7 @@ function Optimize-SecurityProtocol {
 function Get-Downloader {
     $downloadSession = New-Object System.Net.WebClient
 
-    # Set proxy to null if NoProxy is specificed
+    # Set proxy to null if NoProxy is specified
     if ($NoProxy) {
         $downloadSession.Proxy = $null
     } elseif ($Proxy) {
@@ -522,7 +564,7 @@ function Add-ShimsDirToPath {
         }
 
         if (!($h -eq '\')) {
-            $friendlyPath = "$SCOOP_SHIMS_DIR" -Replace ([Regex]::Escape($h)), '~\'
+            $friendlyPath = "$SCOOP_SHIMS_DIR" -replace ([Regex]::Escape($h)), '~\'
             Write-InstallInfo "Adding $friendlyPath to your path."
         } else {
             Write-InstallInfo "Adding $SCOOP_SHIMS_DIR to your path."
@@ -621,7 +663,7 @@ function Add-DefaultConfig {
         }
     }
 
-    # save current datatime to last_update
+    # save current datetime to last_update
     Add-Config -Name 'last_update' -Value ([System.DateTime]::Now.ToString('o')) | Out-Null
 }
 
@@ -635,15 +677,15 @@ function Test-CommandAvailable {
 
 function Install-Scoop {
     Write-InstallInfo 'Initializing...'
-    # Validate install parameters
-    Test-ValidateParameter
     # Check prerequisites
     Test-Prerequisite
+    # Validate install parameters
+    Test-ValidateParameter
     # Enable TLS 1.2
     Optimize-SecurityProtocol
 
     # Download scoop from GitHub
-    Write-InstallInfo 'Downloading ...'
+    Write-InstallInfo 'Downloading...'
     $downloader = Get-Downloader
     [bool]$downloadZipsRequired = $True
 
@@ -658,18 +700,18 @@ function Install-Scoop {
             }
             Write-Verbose "Cloning $SCOOP_PACKAGE_GIT_REPO to $SCOOP_APP_DIR"
             git clone -q $SCOOP_PACKAGE_GIT_REPO $SCOOP_APP_DIR
-            if (-Not $?) {
+            if (-not $?) {
                 throw 'Cloning failed. Falling back to downloading zip files.'
             }
             Write-Verbose "Cloning $SCOOP_MAIN_BUCKET_GIT_REPO to $SCOOP_MAIN_BUCKET_DIR"
             git clone -q $SCOOP_MAIN_BUCKET_GIT_REPO $SCOOP_MAIN_BUCKET_DIR
-            if (-Not $?) {
+            if (-not $?) {
                 throw 'Cloning failed. Falling back to downloading zip files.'
             }
             $downloadZipsRequired = $False
         } catch {
             Write-Warning "$($_.Exception.Message)"
-            $Global:LastExitCode = 0
+            $Global:LASTEXITCODE = 0
         } finally {
             $env:HTTPS_PROXY = $old_https
             $env:HTTP_PROXY = $old_http
@@ -713,7 +755,7 @@ function Install-Scoop {
     }
     # Create the scoop shim
     Import-ScoopShim
-    # Finially ensure scoop shims is in the PATH
+    # Ensure scoop shims is in the PATH
     Add-ShimsDirToPath
     # Setup initial configuration of Scoop
     Add-DefaultConfig
@@ -738,6 +780,33 @@ function Write-DebugInfo {
     Write-Verbose "SCOOP_CACHE_DIR: $SCOOP_CACHE_DIR"
     Write-Verbose "SCOOP_GLOBAL_DIR: $SCOOP_GLOBAL_DIR"
     Write-Verbose "SCOOP_CONFIG_HOME: $SCOOP_CONFIG_HOME"
+}
+
+function Test-ShouldRunInstall {
+    param(
+        [String] $InvocationName
+    )
+
+    # not dot-sourced, run the install flow
+    if ($InvocationName -ne '.') {
+        return $true
+    }
+
+    # dot-sourced, but not in CI, don't run the install flow
+    if (-not $env:CI) {
+        return $false
+    }
+
+    # dot-sourced, in CI, determined by env SCOOP_NOINSTALL
+    $should = $true
+    if ($null -ne $env:SCOOP_NOINSTALL) {
+        $value = $env:SCOOP_NOINSTALL.ToString().Trim().ToLowerInvariant()
+        if ($value -in @('1', 'true', 'yes', 'on')) {
+            $should = $false
+        }
+    }
+
+    return $should
 }
 
 # Prepare variables
@@ -766,14 +835,23 @@ $SCOOP_MAIN_BUCKET_REPO = 'https://github.com/ScoopInstaller/Main/archive/master
 $SCOOP_PACKAGE_GIT_REPO = 'https://github.com/ScoopInstaller/Scoop.git'
 $SCOOP_MAIN_BUCKET_GIT_REPO = 'https://github.com/ScoopInstaller/Main.git'
 
-# Quit if anything goes wrong
-$oldErrorActionPreference = $ErrorActionPreference
-$ErrorActionPreference = 'Stop'
-
-# Logging debug info
-Write-DebugInfo $PSBoundParameters
-# Bootstrap function
-Install-Scoop
-
-# Reset $ErrorActionPreference to original value
-$ErrorActionPreference = $oldErrorActionPreference
+# The install flow triggers only when the script is executed directly, but
+# not when dot-sourced. Dot-sourcing the installer will not trigger the
+# installation, and only the functions will be loaded, e.g., for testing.
+# Downstreams can call `Install-Scoop` explicitly to start the installation.
+# In CI, dot-sourced execution is allowed by default as GitHub Actions executors
+# run the job step in a dot-sourced session. To disable the install flow in CI,
+# set `SCOOP_NOINSTALL=true` to force dot-sourced CI sessions to only
+# load functions.
+$shouldRunInstall = Test-ShouldRunInstall -InvocationName $MyInvocation.InvocationName
+if ($shouldRunInstall) {
+    $oldErrorActionPreference = $ErrorActionPreference
+    try {
+        $ErrorActionPreference = 'Stop'
+        Test-LanguageMode
+        Write-DebugInfo $PSBoundParameters
+        Install-Scoop
+    } finally {
+        $ErrorActionPreference = $oldErrorActionPreference
+    }
+}
